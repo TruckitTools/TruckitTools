@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruckitTracking – Load Management</title>
+<style>
+body { margin:0; font-family:Arial,sans-serif; background:#000; color:#e5e7eb; }
+header { background:#020617; color:#22c55e; padding:15px; text-align:center; border-bottom:1px solid #14532d; position:relative; }
+header a { color:#22c55e; text-decoration:none; font-size:14px; position:absolute; left:15px; top:50%; transform:translateY(-50%); }
+.container { padding:15px; max-width:800px; margin:0 auto; }
+.card { background:#020617; border-radius:8px; padding:15px; margin-bottom:15px; border:1px solid #14532d; }
+button { background:#16a34a; color:#000; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; font-size:16px; margin:5px 0; }
+button.cancel { background:#dc2626; color:#fff; }
+button.secondary { background:#1e40af; color:#fff; }
+button:disabled { opacity:0.6; cursor:not-allowed; }
+input, textarea, select { padding:10px; width:100%; margin-bottom:12px; background:#000; color:#22c55e; border:1px solid #14532d; border-radius:6px; font-size:16px; box-sizing:border-box; }
+.hidden { display:none; }
+.field-label { font-size:14px; color:#94a3b8; margin-bottom:4px; display:block; }
+.load-item { background:#022c22; padding:12px; border-radius:6px; margin-bottom:10px; border:1px solid #14532d; cursor:pointer; }
+.load-item:hover { border-color:#22c55e; }
+.load-item h4 { margin:0 0 6px 0; color:#22c55e; }
+.load-item p { margin:4px 0; font-size:14px; color:#94a3b8; }
+.load-item .meta { font-size:12px; color:#64748b; }
+.actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.status-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+.status-open { background:#14532d; color:#22c55e; }
+.status-assigned { background:#1e3a8a; color:#93c5fd; }
+.status-in-transit { background:#713f12; color:#fbbf24; }
+.status-delivered { background:#3f3f46; color:#a1a1aa; }
+.status-cancelled { background:#7f1d1d; color:#fca5a5; }
+.empty-state { text-align:center; padding:40px 20px; color:#64748b; }
+.search-bar { display:flex; gap:10px; margin-bottom:15px; }
+.search-bar input { flex:1; margin-bottom:0; }
+.form-row { display:flex; gap:10px; }
+.form-row > div { flex:1; }
+@media (max-width:600px) {
+  .form-row { flex-direction:column; gap:0; }
+  header a { position:static; transform:none; display:block; margin-bottom:8px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+<a href="index.html">← Back to Tracking</a>
+<h2>Load Management</h2>
+<p>Create and manage loads (local, free)</p>
+</header>
+
+<div class="container">
+
+<!-- List View -->
+<div class="card" id="listView">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h3 style="margin:0;">Your Loads</h3>
+    <button onclick="showCreateForm()">+ New Load</button>
+  </div>
+
+  <div class="search-bar" style="margin-top:15px;">
+    <input type="text" id="searchInput" placeholder="Search by Load ID, commodity, location..." oninput="renderLoadList()">
+    <select id="statusFilter" onchange="renderLoadList()" style="width:auto; min-width:140px; margin-bottom:0;">
+      <option value="">All statuses</option>
+      <option value="open">Open</option>
+      <option value="assigned">Assigned</option>
+      <option value="in-transit">In Transit</option>
+      <option value="delivered">Delivered</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+
+  <div id="loadList"></div>
+</div>
+
+<!-- Create / Edit Form -->
+<div class="card hidden" id="formView">
+  <h3 id="formTitle">New Load</h3>
+
+  <input type="hidden" id="editLoadId">
+
+  <span class="field-label">Load ID / BOL # *</span>
+  <input type="text" id="loadId" placeholder="e.g. LD-12345 or BOL number">
+
+  <span class="field-label">Commodity</span>
+  <input type="text" id="commodity" placeholder="e.g. Dry Van – General Freight">
+
+  <span class="field-label">Weight</span>
+  <input type="text" id="weight" placeholder="e.g. 42,000 lbs">
+
+  <div class="form-row">
+    <div>
+      <span class="field-label">Pickup Location</span>
+      <input type="text" id="pickupLocation" placeholder="City, State or full address">
+    </div>
+    <div>
+      <span class="field-label">Delivery Location</span>
+      <input type="text" id="deliveryLocation" placeholder="City, State or full address">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div>
+      <span class="field-label">Pickup Date/Time</span>
+      <input type="datetime-local" id="pickupDate">
+    </div>
+    <div>
+      <span class="field-label">Delivery Date/Time</span>
+      <input type="datetime-local" id="deliveryDate">
+    </div>
+  </div>
+
+  <span class="field-label">Rate (optional)</span>
+  <input type="text" id="rate" placeholder="e.g. $2,850">
+
+  <span class="field-label">Status</span>
+  <select id="status">
+    <option value="open">Open</option>
+    <option value="assigned">Assigned</option>
+    <option value="in-transit">In Transit</option>
+    <option value="delivered">Delivered</option>
+    <option value="cancelled">Cancelled</option>
+  </select>
+
+  <span class="field-label">Tracking Reference (optional – link to a live session)</span>
+  <input type="text" id="trackingRef" placeholder="e.g. TR-ABC123">
+
+  <span class="field-label">Notes</span>
+  <textarea id="notes" rows="3" placeholder="Special instructions, equipment needed, etc."></textarea>
+
+  <div class="actions">
+    <button onclick="saveLoad()">Save Load</button>
+    <button class="secondary" onclick="showListView()">Cancel</button>
+    <button class="cancel hidden" id="deleteBtn" onclick="deleteCurrentLoad()">Delete</button>
+  </div>
+</div>
+
+<!-- Detail View -->
+<div class="card hidden" id="detailView">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h3 style="margin:0;" id="detailTitle">Load Details</h3>
+    <button class="secondary" onclick="showListView()">← Back to list</button>
+  </div>
+  <div id="detailContent" style="margin-top:15px; line-height:1.8;"></div>
+  <div class="actions">
+    <button onclick="editFromDetail()">Edit</button>
+    <button class="cancel" onclick="deleteFromDetail()">Delete</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const LOADS_KEY = 'truckit_loads';
+
+function getLoads() {
+  try {
+    const raw = localStorage.getItem(LOADS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLoads(loads) {
+  localStorage.setItem(LOADS_KEY, JSON.stringify(loads));
+}
+
+function generateId() {
+  return 'LD-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function formatDate(datetime) {
+  if (!datetime) return '—';
+  try {
+    return new Date(datetime).toLocaleString();
+  } catch {
+    return datetime;
+  }
+}
+
+function statusBadge(status) {
+  const labels = {
+    open: 'Open',
+    assigned: 'Assigned',
+    'in-transit': 'In Transit',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled'
+  };
+  const cls = 'status-' + (status || 'open');
+  return `<span class="status-badge \( {cls}"> \){labels[status] || status}</span>`;
+}
+
+function renderLoadList() {
+  const loads = getLoads();
+  const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  const statusFilter = document.getElementById('statusFilter').value;
+
+  let filtered = loads;
+  if (statusFilter) {
+    filtered = filtered.filter(l => l.status === statusFilter);
+  }
+  if (search) {
+    filtered = filtered.filter(l => {
+      const hay = [
+        l.loadId, l.commodity, l.pickupLocation, l.deliveryLocation,
+        l.notes, l.trackingRef, l.rate, l.weight
+      ].join(' ').toLowerCase();
+      return hay.includes(search);
+    });
+  }
+
+  // newest first
+  filtered.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+
+  const container = document.getElementById('loadList');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      ${loads.length === 0 ? 'No loads yet. Create your first load.' : 'No loads match your search/filter.'}
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(l => `
+    <div class="load-item" onclick="showDetail('${l.id}')">
+      <h4>${escapeHtml(l.loadId || l.id)} ${statusBadge(l.status)}</h4>
+      <p>${escapeHtml(l.commodity || 'No commodity')} ${l.weight ? '· ' + escapeHtml(l.weight) : ''}</p>
+      <p>${escapeHtml(l.pickupLocation || '—')} → ${escapeHtml(l.deliveryLocation || '—')}</p>
+      <p class="meta">
+        Pickup: ${formatDate(l.pickupDate)} · Updated: ${formatDate(l.updatedAt || l.createdAt)}
+        ${l.trackingRef ? ' · Ref: ' + escapeHtml(l.trackingRef) : ''}
+      </p>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function showListView() {
+  document.getElementById('listView').classList.remove('hidden');
+  document.getElementById('formView').classList.add('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+  renderLoadList();
+}
+
+function showCreateForm() {
+  document.getElementById('formTitle').textContent = 'New Load';
+  document.getElementById('editLoadId').value = '';
+  document.getElementById('loadId').value = '';
+  document.getElementById('commodity').value = '';
+  document.getElementById('weight').value = '';
+  document.getElementById('pickupLocation').value = '';
+  document.getElementById('deliveryLocation').value = '';
+  document.getElementById('pickupDate').value = '';
+  document.getElementById('deliveryDate').value = '';
+  document.getElementById('rate').value = '';
+  document.getElementById('status').value = 'open';
+  document.getElementById('trackingRef').value = '';
+  document.getElementById('notes').value = '';
+  document.getElementById('deleteBtn').classList.add('hidden');
+
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+}
+
+function showEditForm(load) {
+  document.getElementById('formTitle').textContent = 'Edit Load';
+  document.getElementById('editLoadId').value = load.id;
+  document.getElementById('loadId').value = load.loadId || '';
+  document.getElementById('commodity').value = load.commodity || '';
+  document.getElementById('weight').value = load.weight || '';
+  document.getElementById('pickupLocation').value = load.pickupLocation || '';
+  document.getElementById('deliveryLocation').value = load.deliveryLocation || '';
+  document.getElementById('pickupDate').value = load.pickupDate || '';
+  document.getElementById('deliveryDate').value = load.deliveryDate || '';
+  document.getElementById('rate').value = load.rate || '';
+  document.getElementById('status').value = load.status || 'open';
+  document.getElementById('trackingRef').value = load.trackingRef || '';
+  document.getElementById('notes').value = load.notes || '';
+  document.getElementById('deleteBtn').classList.remove('hidden');
+
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+}
+
+function showDetail(id) {
+  const loads = getLoads();
+  const load = loads.find(l => l.id === id);
+  if (!load) return showListView();
+
+  document.getElementById('detailTitle').textContent = load.loadId || load.id;
+  const html = `
+    <p><strong>Status:</strong> ${statusBadge(load.status)}</p>
+    <p><strong>Commodity:</strong> ${escapeHtml(load.commodity) || '—'}</p>
+    <p><strong>Weight:</strong> ${escapeHtml(load.weight) || '—'}</p>
+    <p><strong>Pickup:</strong> ${escapeHtml(load.pickupLocation) || '—'} <br>
+       <span style="color:#94a3b8; font-size:13px;">${formatDate(load.pickupDate)}</span></p>
+    <p><strong>Delivery:</strong> ${escapeHtml(load.deliveryLocation) || '—'} <br>
+       <span style="color:#94a3b8; font-size:13px;">${formatDate(load.deliveryDate)}</span></p>
+    <p><strong>Rate:</strong> ${escapeHtml(load.rate) || '—'}</p>
+    <p><strong>Tracking Ref:</strong> ${load.trackingRef ? escapeHtml(load.trackingRef) : '—'}</p>
+    <p><strong>Notes:</strong><br>${escapeHtml(load.notes).replace(/\n/g, '<br>') || '—'}</p>
+    <p class="meta" style="margin-top:12px; color:#64748b; font-size:12px;">
+      Created: ${formatDate(load.createdAt)} · Updated: ${formatDate(load.updatedAt)}
+    </p>
+  `;
+  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailContent').dataset.id = id;
+
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('formView').classList.add('hidden');
+  document.getElementById('detailView').classList.remove('hidden');
+}
+
+function saveLoad() {
+  const loadIdVal = document.getElementById('loadId').value.trim();
+  if (!loadIdVal) {
+    alert('Load ID / BOL # is required.');
+    return;
+  }
+
+  const editId = document.getElementById('editLoadId').value;
+  const loads = getLoads();
+  const now = Date.now();
+
+  const payload = {
+    loadId: loadIdVal,
+    commodity: document.getElementById('commodity').value.trim(),
+    weight: document.getElementById('weight').value.trim(),
+    pickupLocation: document.getElementById('pickupLocation').value.trim(),
+    deliveryLocation: document.getElementById('deliveryLocation').value.trim(),
+    pickupDate: document.getElementById('pickupDate').value,
+    deliveryDate: document.getElementById('deliveryDate').value,
+    rate: document.getElementById('rate').value.trim(),
+    status: document.getElementById('status').value,
+    trackingRef: document.getElementById('trackingRef').value.trim().toUpperCase(),
+    notes: document.getElementById('notes').value.trim(),
+    updatedAt: now
+  };
+
+  if (editId) {
+    const idx = loads.findIndex(l => l.id === editId);
+    if (idx >= 0) {
+      loads[idx] = { ...loads[idx], ...payload };
+    }
+  } else {
+    loads.push({
+      id: generateId(),
+      createdAt: now,
+      ...payload
+    });
+  }
+
+  saveLoads(loads);
+  showListView();
+}
+
+function deleteCurrentLoad() {
+  const editId = document.getElementById('editLoadId').value;
+  if (!editId) return;
+  if (!confirm('Delete this load? This cannot be undone.')) return;
+  const loads = getLoads().filter(l => l.id !== editId);
+  saveLoads(loads);
+  showListView();
+}
+
+function editFromDetail() {
+  const id = document.getElementById('detailContent').dataset.id;
+  const load = getLoads().find(l => l.id === id);
+  if (load) showEditForm(load);
+}
+
+function deleteFromDetail() {
+  const id = document.getElementById('detailContent').dataset.id;
+  if (!id) return;
+  if (!confirm('Delete this load? This cannot be undone.')) return;
+  const loads = getLoads().filter(l => l.id !== id);
+  saveLoads(loads);
+  showListView();
+}
+
+// Initial render
+renderLoadList();
+</script>
+</body>
+      </html>
