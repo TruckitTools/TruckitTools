@@ -789,31 +789,19 @@ function generateRateConfirmation() {
   doc.save(rateConFilename(load));
 }
 
+
 /**
  * Send RateCon:
- * 1) Generates & downloads the PDF
- * 2) Opens the device default email client with To / Subject / Body pre-filled
- *
- * Note: Browsers cannot attach files to mailto: for security reasons.
- * The PDF is downloaded first; the email body tells the user to attach it.
+ * - Mobile: Web Share API with PDF file attached (share sheet → Mail/Gmail/etc.)
+ * - Desktop: download PDF + open mailto with To/Subject/Body pre-filled
+ * Browsers cannot attach files to mailto: for security reasons.
  */
-function sendRateCon() {
-  const load = getCurrentDetailLoad();
-  if (!load) {
-    alert('Load not found.');
-    return;
-  }
-  if (typeof window.jspdf === 'undefined') {
-    alert('PDF library not loaded. Please refresh the page and try again.');
-    return;
-  }
+function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.userAgent));
+}
 
-  // 1. Generate and download PDF
-  const doc = buildRateConDoc(load);
-  const filename = rateConFilename(load);
-  doc.save(filename);
-
-  // 2. Build mailto link
+function buildRateConEmailParts(load, filename) {
   const to = (load.carrierEmail || '').trim();
   const loadLabel = load.loadId || load.id || 'Load';
   const subject = 'Rate Confirmation – ' + loadLabel;
@@ -841,39 +829,90 @@ function sendRateCon() {
     'Pickup: ' + pickupLine,
     'Delivery: ' + deliveryLine
   ];
-
   if (load.trackingRef) {
     lines.push('Tracking Reference: ' + load.trackingRef);
   }
-
   lines.push(
     '',
-    'The Rate Confirmation PDF has been downloaded to your device as:',
-    filename,
-    '',
-    'Please attach that file to this email before sending, then review, sign, and return the Rate Confirmation at your earliest convenience.',
+    'Please review, sign, and return the Rate Confirmation at your earliest convenience.',
     '',
     'Thank you,',
     'TruckitTools'
   );
 
-  const body = lines.join('\n');
+  return {
+    to: to,
+    subject: subject,
+    body: lines.join('\n'),
+    loadLabel: loadLabel
+  };
+}
 
+function openMailto(to, subject, body, filename) {
   let mailto = 'mailto:';
   if (to) mailto += encodeURIComponent(to);
   mailto += '?subject=' + encodeURIComponent(subject);
   mailto += '&body=' + encodeURIComponent(body);
-
-  // Small delay so the download can start before the mail client opens
-  setTimeout(() => {
-    window.location.href = mailto;
-  }, 400);
+  window.location.href = mailto;
 
   if (!to) {
     setTimeout(() => {
-      alert('No carrier email on this load.\\n\\nThe RateCon PDF was downloaded.\\nYour email app will open — please enter the recipient and attach the PDF file: ' + filename);
-    }, 600);
+      alert('No carrier email on this load.\n\nThe RateCon PDF was downloaded.\nYour email app will open — please enter the recipient and attach the PDF file: ' + filename);
+    }, 500);
   }
+}
+
+async function sendRateCon() {
+  const load = getCurrentDetailLoad();
+  if (!load) {
+    alert('Load not found.');
+    return;
+  }
+  if (typeof window.jspdf === 'undefined') {
+    alert('PDF library not loaded. Please refresh the page and try again.');
+    return;
+  }
+
+  const doc = buildRateConDoc(load);
+  const filename = rateConFilename(load);
+  const email = buildRateConEmailParts(load, filename);
+
+  // Build PDF as Blob for sharing / download
+  const blob = doc.output('blob');
+  const file = new File([blob], filename, { type: 'application/pdf' });
+
+  // --- Mobile: prefer Web Share with file attachment ---
+  const canShareFiles = isMobileDevice() &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function';
+
+  if (canShareFiles) {
+    try {
+      const shareData = {
+        files: [file],
+        title: email.subject,
+        text: email.body
+      };
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return; // user picked Mail/Gmail/etc. with PDF attached
+      }
+    } catch (err) {
+      // User cancelled share sheet — do nothing
+      if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+        return;
+      }
+      // Fall through to download + mailto
+      console.warn('Share failed, falling back:', err);
+    }
+  }
+
+  // --- Desktop (or share unavailable): download PDF + open mailto ---
+  doc.save(filename);
+
+  setTimeout(() => {
+    openMailto(email.to, email.subject, email.body, filename);
+  }, 400);
 }
 
 // Initial render
