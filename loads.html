@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruckitTools – Broker Portal</title>
+<style>
+body { margin:0; font-family:Arial,sans-serif; background:#000; color:#e5e7eb; }
+header { background:#020617; color:#22c55e; padding:15px; text-align:center; border-bottom:1px solid #14532d; position:relative; }
+header .track-link { color:#000; background:#16a34a; text-decoration:none; font-size:13px; font-weight:bold; position:absolute; right:15px; top:50%; transform:translateY(-50%); padding:8px 12px; border-radius:6px; }
+header .home-link { color:#22c55e; text-decoration:none; font-size:13px; position:absolute; left:15px; top:50%; transform:translateY(-50%); }
+header .track-link:hover { background:#22c55e; }
+.container { padding:15px; max-width:800px; margin:0 auto; }
+.card { background:#020617; border-radius:8px; padding:15px; margin-bottom:15px; border:1px solid #14532d; }
+button { background:#16a34a; color:#000; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; font-size:16px; margin:5px 0; }
+button.cancel { background:#dc2626; color:#fff; }
+button.secondary { background:#1e40af; color:#fff; }
+button:disabled { opacity:0.6; cursor:not-allowed; }
+input, textarea, select { padding:10px; width:100%; margin-bottom:12px; background:#000; color:#22c55e; border:1px solid #14532d; border-radius:6px; font-size:16px; box-sizing:border-box; }
+.hidden { display:none; }
+.field-label { font-size:14px; color:#94a3b8; margin-bottom:4px; display:block; }
+.load-item { background:#022c22; padding:12px; border-radius:6px; margin-bottom:10px; border:1px solid #14532d; cursor:pointer; }
+.load-item:hover { border-color:#22c55e; }
+.load-item h4 { margin:0 0 6px 0; color:#22c55e; }
+.load-item p { margin:4px 0; font-size:14px; color:#94a3b8; }
+.load-item .meta { font-size:12px; color:#64748b; }
+.actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:flex-start; }
+.action-stack { display:flex; flex-direction:column; gap:6px; }
+.action-stack button { margin:0; }
+.status-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:12px; font-weight:bold; }
+.status-open { background:#14532d; color:#22c55e; }
+.status-covered { background:#1e3a8a; color:#93c5fd; }
+.status-in-transit { background:#713f12; color:#fbbf24; }
+.status-delivered { background:#3f3f46; color:#a1a1aa; }
+.status-cancelled { background:#7f1d1d; color:#fca5a5; }
+.empty-state { text-align:center; padding:40px 20px; color:#64748b; }
+.search-bar { display:flex; gap:10px; margin-bottom:15px; }
+.search-bar input { flex:1; margin-bottom:0; }
+.form-row { display:flex; gap:10px; }
+.form-row > div { flex:1; }
+.section-title { color:#22c55e; font-size:15px; font-weight:bold; margin:18px 0 10px 0; border-bottom:1px solid #14532d; padding-bottom:6px; }
+.carrier-box { background:#022c22; padding:12px; border-radius:6px; margin-bottom:12px; border:1px solid #14532d; }
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; }
+.modal-overlay.hidden { display:none; }
+.modal-box { background:#020617; border:1px solid #14532d; border-radius:10px; padding:18px; width:100%; max-width:420px; max-height:90vh; overflow-y:auto; }
+.modal-box h3 { margin:0 0 12px 0; color:#22c55e; }
+.modal-actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+@media (max-width:600px) {
+  .form-row { flex-direction:column; gap:0; }
+  header .track-link, header .home-link { position:static; transform:none; display:inline-block; margin:4px 6px; }
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+
+<header>
+<a href="index.html?role=broker" class="track-link">Tracking</a>
+<a href="index.html" class="home-link">TruckitTools</a>
+<h2>Broker Portal</h2>
+<p style="margin:4px 0 0 0; font-size:13px; color:#94a3b8;">Load Management</p>
+</header>
+
+<div class="container">
+
+<!-- List View -->
+<div class="card" id="listView">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h3 style="margin:0;">Your Loads</h3>
+    <button onclick="showCreateForm()">+ New Load</button>
+  </div>
+
+  <div class="search-bar" style="margin-top:15px;">
+    <input type="text" id="searchInput" placeholder="Search by Load ID, commodity, location, carrier..." oninput="renderLoadList()">
+    <select id="statusFilter" onchange="renderLoadList()" style="width:auto; min-width:140px; margin-bottom:0;">
+      <option value="">All statuses</option>
+      <option value="open">Open</option>
+      <option value="covered">Covered</option>
+      <option value="in-transit">In Transit</option>
+      <option value="delivered">Delivered</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+
+  <div id="loadList"></div>
+</div>
+
+<!-- Create / Edit Form -->
+<div class="card hidden" id="formView">
+  <h3 id="formTitle">New Load</h3>
+
+  <input type="hidden" id="editLoadId">
+
+  <div class="section-title">Load Info</div>
+
+  <span class="field-label">Load ID / BOL # *</span>
+  <input type="text" id="loadId" placeholder="e.g. LD-12345 or BOL number">
+
+  <span class="field-label">Commodity</span>
+  <input type="text" id="commodity" placeholder="e.g. Dry Van – General Freight">
+
+  <span class="field-label">Weight</span>
+  <input type="text" id="weight" placeholder="e.g. 42,000 lbs">
+
+  <span class="field-label">Equipment Type</span>
+  <input type="text" id="equipment" placeholder="e.g. Van / 53', Reefer, Flatbed">
+
+  <div class="form-row">
+    <div>
+      <span class="field-label">Pickup Location</span>
+      <input type="text" id="pickupLocation" placeholder="City, State or full address">
+    </div>
+    <div>
+      <span class="field-label">Delivery Location</span>
+      <input type="text" id="deliveryLocation" placeholder="City, State or full address">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div>
+      <span class="field-label">Pickup Date/Time</span>
+      <input type="datetime-local" id="pickupDate">
+    </div>
+    <div>
+      <span class="field-label">Delivery Date/Time</span>
+      <input type="datetime-local" id="deliveryDate">
+    </div>
+  </div>
+
+  <span class="field-label">Rate (optional)</span>
+  <input type="text" id="rate" placeholder="e.g. $2,850">
+
+  <span class="field-label">Status</span>
+  <select id="status">
+    <option value="open">Open</option>
+    <option value="covered">Covered</option>
+    <option value="in-transit">In Transit</option>
+    <option value="delivered">Delivered</option>
+    <option value="cancelled">Cancelled</option>
+  </select>
+
+  <span class="field-label">Tracking Reference (optional – link to a live session)</span>
+  <input type="text" id="trackingRef" placeholder="e.g. TR-ABC123">
+
+  <span class="field-label">Notes</span>
+  <textarea id="notes" rows="3" placeholder="Special instructions, equipment needed, etc."></textarea>
+
+  <div class="section-title">Assigned Carrier</div>
+  <p style="font-size:13px; color:#94a3b8; margin-top:-6px; margin-bottom:12px;">Add the carrier that will haul this load.</p>
+
+  <span class="field-label">Carrier Name / Company</span>
+  <input type="text" id="carrierName" placeholder="e.g. ABC Trucking LLC">
+
+  <div class="form-row">
+    <div>
+      <span class="field-label">MC Number</span>
+      <input type="text" id="carrierMc" placeholder="MC-123456">
+    </div>
+    <div>
+      <span class="field-label">DOT Number</span>
+      <input type="text" id="carrierDot" placeholder="DOT-1234567">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div>
+      <span class="field-label">Driver Name</span>
+      <input type="text" id="carrierDriver" placeholder="Driver full name">
+    </div>
+    <div>
+      <span class="field-label">Driver Phone</span>
+      <input type="tel" id="carrierPhone" placeholder="Phone number">
+    </div>
+  </div>
+
+  <span class="field-label">Carrier Email (for Send RateCon)</span>
+  <input type="email" id="carrierEmail" placeholder="carrier@email.com">
+
+  <span class="field-label">Carrier Notes</span>
+  <textarea id="carrierNotes" rows="2" placeholder="Equipment type, rate confirmation, special instructions for carrier..."></textarea>
+
+  <div class="actions">
+    <button onclick="saveLoad()">Save Load</button>
+    <button class="secondary" onclick="showListView()">Cancel</button>
+    <button class="cancel hidden" id="deleteBtn" onclick="deleteCurrentLoad()">Delete</button>
+  </div>
+</div>
+
+<!-- Detail View -->
+<div class="card hidden" id="detailView">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h3 style="margin:0;" id="detailTitle">Load Details</h3>
+    <button class="secondary" onclick="showListView()">← Back to list</button>
+  </div>
+  <div id="detailContent" style="margin-top:15px; line-height:1.8;"></div>
+  <div class="actions">
+    <button onclick="editFromDetail()">Edit</button>
+    <div class="action-stack">
+      <button class="secondary" onclick="generateRateConfirmation()" style="background:#1e40af;">Generate RateCon</button>
+      <button class="secondary" onclick="sendRateCon()" style="background:#1e40af;">Send RateCon</button>
+    </div>
+    <div class="action-stack">
+      <button class="secondary" onclick="generateBol()" style="background:#7c3aed;">Generate BOL</button>
+      <button class="secondary" onclick="sendBol()" style="background:#7c3aed;">Send BOL</button>
+    </div>
+    <button class="secondary" onclick="sendCarrierPacket()" style="background:#1d4ed8;">Send Carrier Packet</button>
+    <button class="cancel" onclick="deleteFromDetail()">Delete</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const LOADS_KEY = 'truckit_loads';
+
+function getLoads() {
+  try {
+    const raw = localStorage.getItem(LOADS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLoads(loads) {
+  localStorage.setItem(LOADS_KEY, JSON.stringify(loads));
+}
+
+function generateId() {
+  return 'LD-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function formatDate(datetime) {
+  if (!datetime) return '—';
+  try {
+    return new Date(datetime).toLocaleString();
+  } catch {
+    return datetime;
+  }
+}
+
+function statusBadge(status) {
+  const labels = {
+    open: 'Open',
+    covered: 'Covered',
+    assigned: 'Covered', // legacy
+    'in-transit': 'In Transit',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled'
+  };
+  const key = status === 'assigned' ? 'covered' : (status || 'open');
+  const cls = 'status-' + key;
+  return `<span class="status-badge ${cls}">${labels[status] || status}</span>`;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function hasCarrier(load) {
+  return load && (load.carrierName || load.carrierMc || load.carrierDot || load.carrierDriver || load.carrierPhone || load.carrierEmail);
+}
+
+function renderLoadList() {
+  const loads = getLoads();
+  const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  const statusFilter = document.getElementById('statusFilter').value;
+
+  let filtered = loads;
+  if (statusFilter) {
+    filtered = filtered.filter(l => l.status === statusFilter);
+  }
+  if (search) {
+    filtered = filtered.filter(l => {
+      const hay = [
+        l.loadId, l.commodity, l.pickupLocation, l.deliveryLocation,
+        l.notes, l.trackingRef, l.rate, l.weight, l.equipment,
+        l.carrierName, l.carrierMc, l.carrierDot, l.carrierDriver, l.carrierPhone, l.carrierEmail, l.carrierNotes
+      ].join(' ').toLowerCase();
+      return hay.includes(search);
+    });
+  }
+
+  filtered.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+
+  const container = document.getElementById('loadList');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      ${loads.length === 0 ? 'No loads yet. Create your first load.' : 'No loads match your search/filter.'}
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(l => {
+    const carrierLine = hasCarrier(l)
+      ? `<p>Carrier: ${escapeHtml(l.carrierName || '—')}${l.carrierMc ? ' · MC ' + escapeHtml(l.carrierMc) : ''}${l.carrierDriver ? ' · ' + escapeHtml(l.carrierDriver) : ''}</p>`
+      : `<p style="color:#64748b;">No carrier assigned</p>`;
+    return `
+    <div class="load-item" onclick="showDetail('${l.id}')">
+      <h4>${escapeHtml(l.loadId || l.id)} ${statusBadge(l.status)}</h4>
+      <p>${escapeHtml(l.commodity || 'No commodity')}${l.weight ? ' · ' + escapeHtml(l.weight) : ''}${l.equipment ? ' · ' + escapeHtml(l.equipment) : ''}</p>
+      <p>${escapeHtml(l.pickupLocation || '—')} → ${escapeHtml(l.deliveryLocation || '—')}</p>
+      ${carrierLine}
+      <p class="meta">
+        Pickup: ${formatDate(l.pickupDate)} · Updated: ${formatDate(l.updatedAt || l.createdAt)}
+        ${l.trackingRef ? ' · Ref: ' + escapeHtml(l.trackingRef) : ''}
+      </p>
+    </div>`;
+  }).join('');
+}
+
+function showListView() {
+  document.getElementById('listView').classList.remove('hidden');
+  document.getElementById('formView').classList.add('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+  renderLoadList();
+}
+
+function clearForm() {
+  document.getElementById('editLoadId').value = '';
+  document.getElementById('loadId').value = '';
+  document.getElementById('commodity').value = '';
+  document.getElementById('weight').value = '';
+  document.getElementById('equipment').value = '';
+  document.getElementById('pickupLocation').value = '';
+  document.getElementById('deliveryLocation').value = '';
+  document.getElementById('pickupDate').value = '';
+  document.getElementById('deliveryDate').value = '';
+  document.getElementById('rate').value = '';
+  document.getElementById('status').value = 'open';
+  document.getElementById('trackingRef').value = '';
+  document.getElementById('notes').value = '';
+  document.getElementById('carrierName').value = '';
+  document.getElementById('carrierMc').value = '';
+  document.getElementById('carrierDot').value = '';
+  document.getElementById('carrierDriver').value = '';
+  document.getElementById('carrierPhone').value = '';
+  document.getElementById('carrierEmail').value = '';
+  document.getElementById('carrierNotes').value = '';
+  document.getElementById('deleteBtn').classList.add('hidden');
+}
+
+function showCreateForm() {
+  document.getElementById('formTitle').textContent = 'New Load';
+  clearForm();
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+}
+
+function showEditForm(load) {
+  document.getElementById('formTitle').textContent = 'Edit Load';
+  document.getElementById('editLoadId').value = load.id;
+  document.getElementById('loadId').value = load.loadId || '';
+  document.getElementById('commodity').value = load.commodity || '';
+  document.getElementById('weight').value = load.weight || '';
+  document.getElementById('equipment').value = load.equipment || '';
+  document.getElementById('pickupLocation').value = load.pickupLocation || '';
+  document.getElementById('deliveryLocation').value = load.deliveryLocation || '';
+  document.getElementById('pickupDate').value = load.pickupDate || '';
+  document.getElementById('deliveryDate').value = load.deliveryDate || '';
+  document.getElementById('rate').value = load.rate || '';
+  document.getElementById('status').value = load.status || 'open';
+  document.getElementById('trackingRef').value = load.trackingRef || '';
+  document.getElementById('notes').value = load.notes || '';
+  document.getElementById('carrierName').value = load.carrierName || '';
+  document.getElementById('carrierMc').value = load.carrierMc || '';
+  document.getElementById('carrierDot').value = load.carrierDot || '';
+  document.getElementById('carrierDriver').value = load.carrierDriver || '';
+  document.getElementById('carrierPhone').value = load.carrierPhone || '';
+  document.getElementById('carrierEmail').value = load.carrierEmail || '';
+  document.getElementById('carrierNotes').value = load.carrierNotes || '';
+  document.getElementById('deleteBtn').classList.remove('hidden');
+
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+}
+
+function showDetail(id) {
+  const loads = getLoads();
+  const load = loads.find(l => l.id === id);
+  if (!load) return showListView();
+
+  document.getElementById('detailTitle').textContent = load.loadId || load.id;
+
+  let carrierHtml = '';
+  if (hasCarrier(load)) {
+    carrierHtml = `
+      <div class="carrier-box">
+        <p style="margin:0 0 6px 0; color:#22c55e; font-weight:bold;">Assigned Carrier</p>
+        <p><strong>Company:</strong> ${escapeHtml(load.carrierName) || '—'}</p>
+        <p><strong>MC:</strong> ${escapeHtml(load.carrierMc) || '—'} &nbsp; <strong>DOT:</strong> ${escapeHtml(load.carrierDot) || '—'}</p>
+        <p><strong>Driver:</strong> ${escapeHtml(load.carrierDriver) || '—'} &nbsp; <strong>Phone:</strong> ${escapeHtml(load.carrierPhone) || '—'}</p>
+        <p><strong>Email:</strong> ${escapeHtml(load.carrierEmail) || '—'}</p>
+        ${load.carrierNotes ? `<p><strong>Notes:</strong> ${escapeHtml(load.carrierNotes).replace(/\n/g, '<br>')}</p>` : ''}
+      </div>`;
+  } else {
+    carrierHtml = `<p style="color:#64748b;">No carrier assigned yet.</p>`;
+  }
+
+  const html = `
+    <p><strong>Status:</strong> ${statusBadge(load.status)}</p>
+    <p><strong>Commodity:</strong> ${escapeHtml(load.commodity) || '—'}</p>
+    <p><strong>Weight:</strong> ${escapeHtml(load.weight) || '—'}</p>
+    <p><strong>Equipment:</strong> ${escapeHtml(load.equipment) || '—'}</p>
+    <p><strong>Pickup:</strong> ${escapeHtml(load.pickupLocation) || '—'} <br>
+       <span style="color:#94a3b8; font-size:13px;">${formatDate(load.pickupDate)}</span></p>
+    <p><strong>Delivery:</strong> ${escapeHtml(load.deliveryLocation) || '—'} <br>
+       <span style="color:#94a3b8; font-size:13px;">${formatDate(load.deliveryDate)}</span></p>
+    <p><strong>Rate:</strong> ${escapeHtml(load.rate) || '—'}</p>
+    <p><strong>Tracking Ref:</strong> ${load.trackingRef ? escapeHtml(load.trackingRef) : '—'}</p>
+    <p><strong>Notes:</strong><br>${escapeHtml(load.notes).replace(/\n/g, '<br>') || '—'}</p>
+    ${carrierHtml}
+    <p class="meta" style="margin-top:12px; color:#64748b; font-size:12px;">
+      Created: ${formatDate(load.createdAt)} · Updated: ${formatDate(load.updatedAt)}
+    </p>
+  `;
+  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailContent').dataset.id = id;
+
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('formView').classList.add('hidden');
+  document.getElementById('detailView').classList.remove('hidden');
+}
+
+function saveLoad() {
+  const loadIdVal = document.getElementById('loadId').value.trim();
+  if (!loadIdVal) {
+    alert('Load ID / BOL # is required.');
+    return;
+  }
+
+  const editId = document.getElementById('editLoadId').value;
+  const loads = getLoads();
+  const now = Date.now();
+
+  const payload = {
+    loadId: loadIdVal,
+    commodity: document.getElementById('commodity').value.trim(),
+    weight: document.getElementById('weight').value.trim(),
+    equipment: document.getElementById('equipment').value.trim(),
+    pickupLocation: document.getElementById('pickupLocation').value.trim(),
+    deliveryLocation: document.getElementById('deliveryLocation').value.trim(),
+    pickupDate: document.getElementById('pickupDate').value,
+    deliveryDate: document.getElementById('deliveryDate').value,
+    rate: document.getElementById('rate').value.trim(),
+    status: document.getElementById('status').value,
+    trackingRef: document.getElementById('trackingRef').value.trim().toUpperCase(),
+    notes: document.getElementById('notes').value.trim(),
+    carrierName: document.getElementById('carrierName').value.trim(),
+    carrierMc: document.getElementById('carrierMc').value.trim(),
+    carrierDot: document.getElementById('carrierDot').value.trim(),
+    carrierDriver: document.getElementById('carrierDriver').value.trim(),
+    carrierPhone: document.getElementById('carrierPhone').value.trim(),
+    carrierEmail: document.getElementById('carrierEmail').value.trim(),
+    carrierNotes: document.getElementById('carrierNotes').value.trim(),
+    updatedAt: now
+  };
+
+  // Auto-set status to "covered" if carrier info is added and status is still open
+  if (payload.status === 'open' && (payload.carrierName || payload.carrierMc || payload.carrierDriver)) {
+    payload.status = 'covered';
+  }
+
+  if (editId) {
+    const idx = loads.findIndex(l => l.id === editId);
+    if (idx >= 0) {
+      loads[idx] = { ...loads[idx], ...payload };
+    }
+  } else {
+    loads.push({
+      id: generateId(),
+      createdAt: now,
+      ...payload
+    });
+  }
+
+  saveLoads(loads);
+  showListView();
+}
+
+function deleteCurrentLoad() {
+  const editId = document.getElementById('editLoadId').value;
+  if (!editId) return;
+  if (!confirm('Delete this load? This cannot be undone.')) return;
+  const loads = getLoads().filter(l => l.id !== editId);
+  saveLoads(loads);
+  showListView();
+}
+
+function editFromDetail() {
+  const id = document.getElementById('detailContent').dataset.id;
+  const load = getLoads().find(l => l.id === id);
+  if (load) showEditForm(load);
+}
+
+function deleteFromDetail() {
+  const id = document.getElementById('detailContent').dataset.id;
+  if (!id) return;
+  if (!confirm('Delete this load? This cannot be undone.')) return;
+  const loads = getLoads().filter(l => l.id !== id);
+  saveLoads(loads);
+  showListView();
+}
+
+
+
+function getCurrentDetailLoad() {
+  const id = document.getElementById('detailContent').dataset.id;
+  return getLoads().find(l => l.id === id) || null;
+}
+
+function rateConFilename(load) {
+  return 'RateConfirmation_' + (load.loadId || load.id || 'Load').replace(/[^a-zA-Z0-9-_]/g, '_') + '.pdf';
+}
+
+/** Build the Rate Confirmation jsPDF document from a load object */
+function buildRateConDoc(load) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const m = 36;
+  let y = 0;
+
+  const dark = [2, 6, 23];
+  const green = [22, 163, 74];
+  const darkGreen = [20, 83, 45];
+  const text = [17, 24, 39];
+  const muted = [107, 114, 128];
+  const lightGray = [243, 244, 246];
+  const border = [209, 213, 219];
+
+  function setFill(rgb) { doc.setFillColor(...rgb); }
+  function setDraw(rgb) { doc.setDrawColor(...rgb); }
+  function setText(rgb) { doc.setTextColor(...rgb); }
+
+  // Header bar
+  setFill(dark);
+  doc.rect(0, 0, pageW, 48, 'F');
+  setText(green);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('TruckitTools', m, 30);
+  setText([255, 255, 255]);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text('Rate Confirmation', pageW - m, 30, { align: 'right' });
+
+  y = 68;
+  setText(text);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('Rate Confirmation', m, y);
+  y += 18;
+
+  const boxH = 78;
+  const boxW = (pageW - 2 * m - 10) / 2;
+
+  setFill(lightGray);
+  setDraw(border);
+  doc.roundedRect(m, y, boxW, boxH, 4, 4, 'FD');
+  setText(darkGreen);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('BILL TO / BROKER', m + 8, y + 14);
+  setText(text);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('TruckitTools', m + 8, y + 28);
+  doc.setFontSize(7);
+  setText(muted);
+  doc.text('23 Winnard Rd. Hampton, VA 23669', m + 8, y + 42);
+  doc.text('Phone: 804-577-7423', m + 8, y + 54);
+  doc.text('Load ID: ' + (load.loadId || load.id || ''), m + 8, y + 66);
+
+
+  setFill(lightGray);
+  setDraw(border);
+  doc.roundedRect(m + boxW + 10, y, boxW, boxH, 4, 4, 'FD');
+  setText(darkGreen);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('REMIT POD, BOL & INVOICE TO', m + boxW + 18, y + 14);
+  setText(muted);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('Submit documents with this Rate Confirmation', m + boxW + 18, y + 30);
+  doc.text('Reference Load #: ' + (load.loadId || load.id || ''), m + boxW + 18, y + 44);
+  if (load.trackingRef) {
+    doc.text('Tracking Ref: ' + load.trackingRef, m + boxW + 18, y + 58);
+  }
+
+  y += boxH + 16;
+
+  setDraw(border);
+  doc.setLineWidth(0.6);
+  doc.line(m, y, pageW - m, y);
+  y += 14;
+
+  setText(muted);
+  doc.setFontSize(7);
+  doc.text('Load #', m, y);
+  doc.text('Generated', m + 120, y);
+  doc.text('From', m + 280, y);
+  y += 12;
+  setText(text);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text(String(load.loadId || load.id || '—'), m, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(new Date().toLocaleString(), m + 120, y);
+  doc.text('TruckitTools', m + 280, y);
+
+  y += 18;
+  doc.line(m, y, pageW - m, y);
+  y += 16;
+
+  setText(darkGreen);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('CARRIER', m, y);
+  y += 12;
+  setText(text);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(load.carrierName || '— Not assigned —', m, y);
+  y += 12;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  const driverLine = [load.carrierDriver, load.carrierPhone].filter(Boolean).join('  |  ') || '—';
+  doc.text('Driver: ' + driverLine, m, y);
+  y += 11;
+  const mcDot = [];
+  if (load.carrierMc) mcDot.push('MC: ' + load.carrierMc);
+  if (load.carrierDot) mcDot.push('DOT: ' + load.carrierDot);
+  doc.text(mcDot.join('     ') || 'MC / DOT: —', m, y);
+  if (load.carrierEmail) {
+    y += 11;
+    doc.text('Email: ' + load.carrierEmail, m, y);
+  }
+
+  const rateX = m + 320;
+  const rateY = y - 42;
+  setFill([236, 253, 245]);
+  setDraw(green);
+  doc.setLineWidth(1.2);
+  doc.roundedRect(rateX, rateY, 200, 58, 4, 4, 'FD');
+  setText(darkGreen);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('RATE', rateX + 10, rateY + 14);
+  setText(text);
+  doc.setFontSize(14);
+  const rateStr = load.rate ? (String(load.rate).startsWith('$') ? load.rate : '$' + load.rate) : '$—';
+  doc.text(String(rateStr), rateX + 10, rateY + 32);
+  setText(muted);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('TOTAL IN U.S. DOLLARS', rateX + 10, rateY + 48);
+
+  y += 28;
+
+  setFill(lightGray);
+  setDraw(border);
+  doc.setLineWidth(0.5);
+  doc.rect(m, y, pageW - 2 * m, 42, 'FD');
+  const cols = [
+    ['Commodity', load.commodity || '—'],
+    ['Weight', load.weight || '—'],
+    ['Equipment', load.equipment || '—'],
+    ['Tracking Ref', load.trackingRef || '—']
+  ];
+  const colW = (pageW - 2 * m) / 4;
+  cols.forEach((c, i) => {
+    const x = m + i * colW + 6;
+    setText(muted);
+    doc.setFontSize(7);
+    doc.text(c[0], x, y + 12);
+    setText(text);
+    doc.setFontSize(9);
+    doc.text(String(c[1]).substring(0, 28), x, y + 26);
+  });
+  y += 52;
+
+  setText(darkGreen);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('NOTES TO CARRIER', m, y);
+  y += 4;
+  setDraw(border);
+  doc.line(m, y, pageW - m, y);
+  y += 12;
+  setText(text);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  const notes = load.notes || load.carrierNotes || '—';
+  const noteLines = doc.splitTextToSize(String(notes), pageW - 2 * m);
+  doc.text(noteLines.slice(0, 3), m, y);
+  y += Math.min(noteLines.length, 3) * 11 + 10;
+
+  setFill(dark);
+  doc.rect(m, y, pageW - 2 * m, 16, 'F');
+  setText(green);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('PICK UPS', m + 6, y + 11);
+  y += 24;
+
+  setText(muted);
+  doc.setFontSize(7);
+  doc.text('Location', m, y);
+  doc.text('Date & Time', m + 320, y);
+  y += 4;
+  setDraw(border);
+  doc.line(m, y, pageW - m, y);
+  y += 12;
+
+  setText(text);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(load.pickupLocation || '—', m, y);
+  doc.text(load.pickupDate ? formatDate(load.pickupDate) : '—', m + 320, y);
+  y += 18;
+
+  setFill(dark);
+  doc.rect(m, y, pageW - 2 * m, 16, 'F');
+  setText(green);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('DELIVERIES', m + 6, y + 11);
+  y += 24;
+
+  setText(muted);
+  doc.setFontSize(7);
+  doc.text('Location', m, y);
+  doc.text('Date & Time', m + 320, y);
+  y += 4;
+  setDraw(border);
+  doc.line(m, y, pageW - m, y);
+  y += 12;
+
+  setText(text);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(load.deliveryLocation || '—', m, y);
+  doc.text(load.deliveryDate ? formatDate(load.deliveryDate) : '—', m + 320, y);
+  y += 28;
+
+  setDraw(border);
+  doc.setLineWidth(0.8);
+  doc.line(m, y, pageW - m, y);
+  y += 16;
+
+  setText(darkGreen);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('CARRIER ACCEPTANCE', m, y);
+  y += 12;
+  setText(muted);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('By signing below, Carrier agrees to the rate and terms stated in this Rate Confirmation.', m, y);
+  y += 22;
+
+  setDraw(border);
+  doc.setLineWidth(0.7);
+  doc.line(m, y, m + 160, y);
+  doc.line(m + 180, y, m + 340, y);
+  doc.line(m + 360, y, pageW - m, y);
+  setText(muted);
+  doc.setFontSize(6);
+  doc.text('Carrier Authorized Signature', m, y + 10);
+  doc.text('Print Name / Title', m + 180, y + 10);
+  doc.text('Date', m + 360, y + 10);
+
+  y += 28;
+  doc.line(m, y, m + 160, y);
+  doc.line(m + 180, y, m + 300, y);
+  doc.line(m + 320, y, pageW - m, y);
+  doc.text('Driver Name', m, y + 10);
+  doc.text('Driver Phone', m + 180, y + 10);
+  doc.text('Truck / Trailer #', m + 320, y + 10);
+
+  setDraw(border);
+  doc.setLineWidth(0.5);
+  doc.line(m, pageH - 30, pageW - m, pageH - 30);
+  setText(muted);
+  doc.setFontSize(7);
+  doc.text('TruckitTools  •  This document is a rate confirmation. Please sign and return.', m, pageH - 18);
+  doc.text('Page 1 of 1', pageW - m, pageH - 18, { align: 'right' });
+
+  return doc;
+}
+
+function generateRateConfirmation() {
+  const load = getCurrentDetailLoad();
+  if (!load) {
+    alert('Load not found.');
+    return;
+  }
+  if (typeof window.jspdf === 'undefined') {
+    alert('PDF library not loaded. Please refresh the page and try again.');
+    return;
+  }
+  const doc = buildRateConDoc(load);
+  doc.save(rateConFilename(load));
+}
+
+
+/**
+ * Send RateCon:
+ * - Mobile: Web Share API with PDF file attached (share sheet → Mail/Gmail/etc.)
+ * - Desktop: download PDF + open mailto with To/Subject/Body pre-filled
+ * Browsers cannot attach files to mailto: for security reasons.
+ */
+function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.userAgent));
+}
+
+function buildRateConEmailParts(load, filename) {
+  const to = (load.carrierEmail || '').trim();
+  const loadLabel = load.loadId || load.id || 'Load';
+  const subject = 'Rate Confirmation – ' + loadLabel;
+
+  const greeting = load.carrierName ? ('Hello ' + load.carrierName + ',') : 'Hello,';
+  const rateDisplay = load.rate
+    ? (String(load.rate).startsWith('$') ? load.rate : ('$' + load.rate))
+    : '—';
+  const pickupLine = load.pickupLocation
+    ? (load.pickupLocation + (load.pickupDate ? (' on ' + formatDate(load.pickupDate)) : ''))
+    : '—';
+  const deliveryLine = load.deliveryLocation
+    ? (load.deliveryLocation + (load.deliveryDate ? (' on ' + formatDate(load.deliveryDate)) : ''))
+    : '—';
+
+  const lines = [
+    greeting,
+    '',
+    'Please find attached the Rate Confirmation for the load below.',
+    '',
+    'Load #: ' + loadLabel,
+    'Commodity: ' + (load.commodity || '—'),
+    'Weight: ' + (load.weight || '—'),
+    'Agreed Rate: ' + rateDisplay,
+    'Pickup: ' + pickupLine,
+    'Delivery: ' + deliveryLine
+  ];
+  if (load.trackingRef) {
+    lines.push('Tracking Reference: ' + load.trackingRef);
+  }
+  lines.push(
+    '',
+    'Please review, sign, and return the Rate Confirmation at your earliest convenience.',
+    '',
+    'Thank you,',
+    'TruckitTools'
+  );
+
+  return {
+    to: to,
+    subject: subject,
+    body: lines.join('\n'),
+    loadLabel: loadLabel
+  };
+}
+
+function openMailto(to, subject, body, filename) {
+  let mailto = 'mailto:';
+  if (to) mailto += encodeURIComponent(to);
+  mailto += '?subject=' + encodeURIComponent(subject);
+  mailto += '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
+
+  if (!to) {
+    setTimeout(() => {
+      alert('No carrier email on this load.\n\nThe RateCon PDF was downloaded.\nYour email app will open — please enter the recipient and attach the PDF file: ' + filename);
+    }, 500);
+  }
+}
+
+
+
+function bolFilename(load) {
+  return 'BOL_' + (load.loadId || load.id || 'Load').replace(/[^a-zA-Z0-9-_]/g, '_') + '.pdf';
+}
+
+let bolModalMode = 'generate'; // 'generate' | 'send'
+
+function openBolModal(mode) {
+  const load = getCurrentDetailLoad();
+  if (!load) {
+    alert('Load not found.');
+    return;
+  }
+  bolModalMode = mode === 'send' ? 'send' : 'generate';
+  // Start with blank Bill To fields
+  document.getElementById('bolBillName').value = '';
+  document.getElementById('bolBillAddress').value = '';
+  document.getElementById('bolBillCity').value = '';
+  document.getElementById('bolBillState').value = '';
+  document.getElementById('bolBillZip').value = '';
+  const title = document.querySelector('#bolModal h3');
+  const submitBtn = document.querySelector('#bolModal .modal-actions button:not(.cancel)');
+  if (title) title.textContent = bolModalMode === 'send' ? 'Bill To — Send BOL' : 'Bill To — Generate BOL';
+  if (submitBtn) submitBtn.textContent = bolModalMode === 'send' ? 'Send BOL' : 'Generate BOL';
+  document.getElementById('bolModal').classList.remove('hidden');
+}
+
+function closeBolModal() {
+  document.getElementById('bolModal').classList.add('hidden');
+}
+
+function getBolBillToFromModal() {
+  return {
+    name: document.getElementById('bolBillName').value.trim(),
+    address: document.getElementById('bolBillAddress').value.trim(),
+    city: document.getElementById('bolBillCity').value.trim(),
+    state: document.getElementById('bolBillState').value.trim(),
+    zip: document.getElementById('bolBillZip').value.trim()
+  };
+}
+
+async function submitBolModal() {
+  const load = getCurrentDetailLoad();
+  if (!load) {
+    alert('Load not found.');
+    return;
+  }
+  if (typeof window.jspdf === 'undefined') {
+    alert('PDF library not loaded. Please refresh the page and try again.');
+    return;
+  }
+  const billTo = getBolBillToFromModal();
+  closeBolModal();
+  const doc = buildBolDoc(load, billTo);
+  const filename = bolFilename(load);
+
+  if (bolModalMode === 'send') {
+    await shareOrMailtoBol(load, doc, filename);
+  } else {
+    doc.save(filename);
+  }
+}
+
+function generateBol() {
+  openBolModal('generate');
+}
+
+function sendBol() {
+  openBolModal('send');
+}
+
+function buildBolEmailParts(load, filename) {
+  const to = (load.carrierEmail || '').trim();
+  const loadLabel = load.loadId || load.id || 'Load';
+  const subject = 'Bill of Lading – ' + loadLabel;
+  const greeting = load.carrierName ? ('Hello ' + load.carrierName + ',') : 'Hello,';
+  const lines = [
+    greeting,
+    '',
+    'Please find the Bill of Lading for the following load:',
+    '',
+    'Load / BOL #: ' + loadLabel,
+    'Commodity: ' + (load.commodity || '—'),
+    'Weight: ' + (load.weight || '—'),
+    'Equipment: ' + (load.equipment || '—'),
+    'Pickup: ' + (load.pickupLocation || '—'),
+    'Delivery: ' + (load.deliveryLocation || '—'),
+    '',
+    'Please review and use this BOL for pickup and delivery.',
+    '',
+    'Thank you,',
+    'TruckitTools',
+    '23 Winnard Rd. Hampton, VA 23669'
+  ];
+  return { to: to, subject: subject, body: lines.join('\n') };
+}
+
+async function shareOrMailtoBol(load, doc, filename) {
+  const email = buildBolEmailParts(load, filename);
+  const blob = doc.output('blob');
+  const file = new File([blob], filename, { type: 'application/pdf' });
+
+  const canShareFiles = isMobileDevice() &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function';
+
+  if (canShareFiles) {
+    try {
+      const shareData = { files: [file], title: email.subject, text: email.body };
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch (err) {
+      if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+      console.warn('Share failed, falling back:', err);
+    }
+  }
+
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  setTimeout(() => {
+    openMailto(email.to, email.subject, email.body, filename);
+  }, 400);
+}
+
+function makeBolBarcodeDataUrl(text) {
+  try {
+    if (typeof JsBarcode === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    JsBarcode(canvas, String(text || 'BOL'), {
+      format: 'CODE128',
+      width: 1.4,
+      height: 36,
+      displayValue: true,
+      fontSize: 10,
+      margin: 2,
+      background: '#ffffff',
+      lineColor: '#000000'
+    });
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    console.warn('Barcode failed', e);
+    return null;
+  }
+}
+
+/** Full-page Bill of Lading — TruckitTools theme (reference-style layout) */
+function buildBolDoc(load, billTo) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const m = 26;
+  let y = 0;
+
+  const dark = [2, 6, 23];
+  const green = [22, 163, 74];
+  const darkGreen = [20, 83, 45];
+  const textCol = [17, 24, 39];
+  const muted = [107, 114, 128];
+  const lightGray = [243, 244, 246];
+  const border = [180, 180, 180];
+
+  function setFill(rgb) { doc.setFillColor(...rgb); }
+  function setDraw(rgb) { doc.setDrawColor(...rgb); }
+  function setText(rgb) { doc.setTextColor(...rgb); }
+  function hr(yy) { setDraw(border); doc.setLineWidth(0.5); doc.line(m, yy, pageW - m, yy); }
+  function box(x, yy, w, h) { setDraw(border); doc.setLineWidth(0.55); doc.rect(x, yy, w, h); }
+  function smallLabel(str, x, yy) {
+    setText(muted); doc.setFont('helvetica', 'normal'); doc.setFontSize(6);
+    doc.text(str, x, yy);
+  }
+
+  const bolNum = String(load.loadId || load.id || 'BOL');
+  billTo = billTo || {};
+  const billName = billTo.name || 'TruckiT Transport';
+  const billAddr = billTo.address || '23 Winnard Rd.';
+  const billCity = billTo.city || 'Hampton';
+  const billState = billTo.state || 'VA';
+  const billZip = billTo.zip || '23669';
+  const billCsz = [billCity, [billState, billZip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+
+  // Header
+  setFill(dark);
+  doc.rect(0, 0, pageW, 38, 'F');
+  setText(green);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('TruckitTools', m, 24);
+  setText([255, 255, 255]);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text('Bill of Lading', pageW - m, 24, { align: 'right' });
+
+  y = 46;
+  setText(textCol);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('BILL OF LADING', m, y + 8);
+
+  const barcode = makeBolBarcodeDataUrl(bolNum);
+  if (barcode) {
+    try { doc.addImage(barcode, 'PNG', pageW - m - 155, y - 6, 155, 40); } catch (e) {}
+  } else {
+    setText(muted);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('BOL# ' + bolNum, pageW - m, y + 8, { align: 'right' });
+  }
+  y += 40;
+  hr(y);
+  y += 6;
+
+  // Meta: BOL # | Date | SCAC / Pro
+  const c3 = (pageW - 2 * m - 8) / 3;
+  box(m, y, c3, 28);
+  box(m + c3 + 4, y, c3, 28);
+  box(m + 2 * (c3 + 4), y, c3, 28);
+  smallLabel('BOL NUMBER', m + 3, y + 9);
+  smallLabel('DATE', m + c3 + 7, y + 9);
+  smallLabel('SCAC / PRO NUMBER', m + 2 * (c3 + 4) + 3, y + 9);
+  setText(textCol); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  doc.text(bolNum, m + 3, y + 22);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  doc.text(new Date().toLocaleDateString(), m + c3 + 7, y + 22);
+  doc.text('—', m + 2 * (c3 + 4) + 3, y + 22);
+  y += 34;
+
+  // SHIP FROM | SHIP TO
+  const half = (pageW - 2 * m - 6) / 2;
+  const shipH = 72;
+  box(m, y, half, shipH);
+  box(m + half + 6, y, half, shipH);
+  setFill(dark);
+  doc.rect(m, y, half, 13, 'F');
+  doc.rect(m + half + 6, y, half, 13, 'F');
+  setText(green); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+  doc.text('SHIP FROM', m + 4, y + 9);
+  doc.text('SHIP TO', m + half + 10, y + 9);
+
+  setText(textCol); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+  const fromLines = doc.splitTextToSize(load.pickupLocation || 'Name / Address / City, ST ZIP', half - 10);
+  doc.text(fromLines.slice(0, 4), m + 4, y + 24);
+  smallLabel('SID# ________    FOB: ____', m + 4, y + shipH - 6);
+  if (load.pickupDate) {
+    setText(muted); doc.setFontSize(6.5);
+    doc.text('Pickup: ' + formatDate(load.pickupDate), m + half - 4, y + shipH - 6, { align: 'right' });
+  }
+
+  setText(textCol); doc.setFontSize(7.5);
+  const toLines = doc.splitTextToSize(load.deliveryLocation || 'Name / Address / City, ST ZIP', half - 10);
+  doc.text(toLines.slice(0, 4), m + half + 10, y + 24);
+  smallLabel('CID# ________    Phone: ________', m + half + 10, y + shipH - 6);
+  if (load.deliveryDate) {
+    setText(muted); doc.setFontSize(6.5);
+    doc.text('Delivery: ' + formatDate(load.deliveryDate), pageW - m - 4, y + shipH - 6, { align: 'right' });
+  }
+  y += shipH + 5;
+
+  // Carrier information
+  box(m, y, pageW - 2 * m, 34);
+  smallLabel('CARRIER NAME', m + 3, y + 9);
+  smallLabel('MC#', m + 175, y + 9);
+  smallLabel('DOT#', m + 250, y + 9);
+  smallLabel('TRAILER #', m + 330, y + 9);
+  smallLabel('SEAL #', m + 430, y + 9);
+  setText(textCol); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text(String(load.carrierName || '—').substring(0, 26), m + 3, y + 22);
+  doc.text(String(load.carrierMc || '—'), m + 175, y + 22);
+  doc.text(String(load.carrierDot || '—'), m + 250, y + 22);
+  doc.text('________', m + 330, y + 22);
+  doc.text('________', m + 430, y + 22);
+  y += 40;
+
+  // Third party bill to
+  setFill([236, 253, 245]);
+  doc.rect(m, y, pageW - 2 * m, 46, 'F');
+  box(m, y, pageW - 2 * m, 46);
+  setText(darkGreen); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+  doc.text('THIRD PARTY FREIGHT CHARGES BILL TO', m + 4, y + 10);
+  setText(textCol); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text('Name: ' + billName, m + 4, y + 22);
+  doc.text('Address: ' + billAddr, m + 4, y + 33);
+  doc.text('City/State/Zip: ' + billCsz, m + 4, y + 43);
+  setText(muted); doc.setFontSize(6.5);
+  doc.text('Freight Charge Terms:', pageW - m - 120, y + 10);
+  doc.text('(charges prepaid unless marked otherwise)', pageW - m - 4, y + 20, { align: 'right' });
+  setText(textCol); doc.setFontSize(7);
+  doc.text('Prepaid ___   Collect ___   3rd Party  X', pageW - m - 4, y + 34, { align: 'right' });
+  y += 52;
+
+  // Customer order table
+  setFill(dark);
+  doc.rect(m, y, pageW - 2 * m, 13, 'F');
+  setText(green); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5);
+  doc.text('CUSTOMER ORDER NUMBER', m + 3, y + 9);
+  doc.text('# PKGS', m + 145, y + 9);
+  doc.text('WEIGHT', m + 190, y + 9);
+  doc.text('PALLET/SLIP', m + 250, y + 9);
+  doc.text('ADDITIONAL SHIPPER INFO', m + 320, y + 9);
+  y += 13;
+  box(m, y, pageW - 2 * m, 28);
+  setText(textCol); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text(bolNum, m + 3, y + 12);
+  doc.text('1', m + 150, y + 12);
+  doc.text(String(load.weight || '—'), m + 190, y + 12);
+  doc.text('Y __  N __', m + 250, y + 12);
+  doc.text((load.equipment || '').substring(0, 28) || '—', m + 320, y + 12);
+  y += 34;
+
+  // Commodity / handling
+  setFill(dark);
+  doc.rect(m, y, pageW - 2 * m, 13, 'F');
+  setText(green); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5);
+  doc.text('HANDLING UNIT QTY/TYPE', m + 3, y + 9);
+  doc.text('PACKAGE QTY/TYPE', m + 130, y + 9);
+  doc.text('WEIGHT', m + 250, y + 9);
+  doc.text('H.M.', m + 310, y + 9);
+  doc.text('COMMODITY DESCRIPTION', m + 340, y + 9);
+  y += 13;
+  box(m, y, pageW - 2 * m, 36);
+  setText(textCol); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text('1 / ' + (load.equipment || 'Unit').substring(0, 12), m + 3, y + 14);
+  doc.text('—', m + 130, y + 14);
+  doc.text(String(load.weight || '—'), m + 250, y + 14);
+  doc.text('N', m + 314, y + 14);
+  const cLines = doc.splitTextToSize(String(load.commodity || '—'), 190);
+  doc.text(cLines.slice(0, 2), m + 340, y + 14);
+  y += 42;
+
+  setText(muted); doc.setFontSize(6);
+  doc.text('Commodities requiring special or additional care or attention in handling or stowing must be so marked and packaged as to ensure safe transportation with ordinary care.  NMFC# ________  CLASS ________', m, y, { maxWidth: pageW - 2 * m });
+  y += 12;
+
+  // Special instructions
+  setText(darkGreen); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+  doc.text('SPECIAL INSTRUCTIONS', m, y);
+  y += 2; hr(y); y += 9;
+  setText(textCol); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+  const notes = String(load.notes || load.carrierNotes || '');
+  const nLines = doc.splitTextToSize(notes || '—', pageW - 2 * m);
+  doc.text(nLines.slice(0, 2), m, y);
+  y += Math.min(nLines.length, 2) * 9 + 6;
+
+  if (load.trackingRef || load.carrierDriver) {
+    setText(muted); doc.setFontSize(7);
+    let extra = [];
+    if (load.trackingRef) extra.push('Tracking Ref: ' + load.trackingRef);
+    if (load.carrierDriver) extra.push('Driver: ' + load.carrierDriver);
+    if (load.carrierPhone) extra.push('Phone: ' + load.carrierPhone);
+    doc.text(extra.join('   |   '), m, y);
+    y += 10;
+  }
+
+  // Legal
+  setFill(lightGray);
+  doc.rect(m, y, pageW - 2 * m, 62, 'F');
+  box(m, y, pageW - 2 * m, 62);
+  setText(textCol); doc.setFontSize(5.8);
+  const legal1 = 'RECEIVED, subject to individually determined rates or contracts that have been agreed upon in writing between the carrier and shipper, if applicable, otherwise to the rates, classifications and rules that have been established by the carrier and are available to the shipper, on request, and to all applicable state and federal regulations.';
+  const legal2 = 'NOTE: Liability limitation for loss or damage on this shipment may be applicable. See 49 U.S.C. § 14706 and 49 U.S.C. § 14701(c)(1)(A) and (B). Where the rate is dependent on value, shippers are required to state specifically in writing the agreed or declared value of the property as follows: "The agreed or declared value of the property is specifically stated by the shipper to be not exceeding ______________ per ______________."';
+  const legal3 = 'This is to certify that the above named materials are properly classified, packaged, marked and labeled, and are in proper condition for transportation according to the applicable regulations of the DOT.';
+  doc.text(doc.splitTextToSize(legal1, pageW - 2 * m - 8), m + 3, y + 8);
+  doc.text(doc.splitTextToSize(legal2, pageW - 2 * m - 8), m + 3, y + 26);
+  doc.text(doc.splitTextToSize(legal3, pageW - 2 * m - 8), m + 3, y + 48);
+  y += 68;
+
+  setText(muted); doc.setFontSize(6);
+  doc.text('The carrier shall not make delivery of this shipment without payment of freight and all other lawful charges.  Master Bill of Lading: with attached underlying Bills of Lading (if applicable).', m, y, { maxWidth: pageW - 2 * m });
+  y += 12;
+
+  // Signatures
+  setText(darkGreen); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+  doc.text('SIGNATURES', m, y);
+  y += 10;
+  const sigW = (pageW - 2 * m - 10) / 3;
+  setText(muted); doc.setFont('helvetica', 'normal'); doc.setFontSize(6);
+  doc.text('SHIPPER SIGNATURE / DATE', m, y);
+  doc.text('CARRIER SIGNATURE / PICKUP DATE', m + sigW + 5, y);
+  doc.text('CONSIGNEE SIGNATURE / DATE', m + 2 * (sigW + 5), y);
+  y += 22;
+  setDraw(border); doc.setLineWidth(0.7);
+  doc.line(m, y, m + sigW, y);
+  doc.line(m + sigW + 5, y, m + 2 * sigW + 5, y);
+  doc.line(m + 2 * (sigW + 5), y, pageW - m, y);
+  y += 11;
+  setText(textCol); doc.setFontSize(6.5);
+  doc.text('Trailer Loaded:  __ By Shipper   __ By Driver', m, y);
+  doc.text('Freight Counted:  __ By Shipper   __ By Driver/pallets STC   __ By Driver', m + sigW + 5, y);
+  y += 10;
+  setText(muted); doc.setFontSize(5.8);
+  doc.text('Carrier acknowledges receipt of packages and required placards. Carrier certifies emergency response information was made available and/or carrier has the US DOT emergency response guidebook or equivalent documentation in the vehicle.', m, y, { maxWidth: pageW - 2 * m });
+
+  // Footer
+  setDraw(border); doc.setLineWidth(0.5);
+  doc.line(m, pageH - 22, pageW - m, pageH - 22);
+  setText(muted); doc.setFontSize(6.5);
+  doc.text('TruckitTools  •  23 Winnard Rd. Hampton, VA 23669  •  804-577-7423', m, pageH - 12);
+  doc.text('Page 1 of 1', pageW - m, pageH - 12, { align: 'right' });
+
+  return doc;
+}
+
+async function sendRateCon() {
+  const load = getCurrentDetailLoad();
+  if (!load) {
+    alert('Load not found.');
+    return;
+  }
+  if (typeof window.jspdf === 'undefined') {
+    alert('PDF library not loaded. Please refresh the page and try again.');
+    return;
+  }
+
+  const doc = buildRateConDoc(load);
+  const filename = rateConFilename(load);
+  const email = buildRateConEmailParts(load, filename);
+
+  // Build PDF as Blob for sharing / download
+  const blob = doc.output('blob');
+  const file = new File([blob], filename, { type: 'application/pdf' });
+
+  // --- Mobile: prefer Web Share with file attachment ---
+  const canShareFiles = isMobileDevice() &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function';
+
+  if (canShareFiles) {
+    try {
+      const shareData = {
+        files: [file],
+        title: email.subject,
+        text: email.body
+      };
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return; // user picked Mail/Gmail/etc. with PDF attached
+      }
+    } catch (err) {
+      // User cancelled share sheet — do nothing
+      if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+        return;
+      }
+      // Fall through to download + mailto
+      console.warn('Share failed, falling back:', err);
+    }
+  }
+
+  // --- Desktop (or share unavailable): download PDF + open mailto ---
+  doc.save(filename);
+
+  setTimeout(() => {
+    openMailto(email.to, email.subject, email.body, filename);
+  }, 400);
+}
+
+
+/** Path to the static Carrier Setup Packet PDF (same folder as loads.html on GitHub Pages) */
+const CARRIER_PACKET_URL = 'TruckitTools_Carrier_Setup_Packet.pdf';
+const CARRIER_PACKET_FILENAME = 'TruckitTools_Carrier_Setup_Packet.pdf';
+
+async function fetchCarrierPacketFile() {
+  const res = await fetch(CARRIER_PACKET_URL);
+  if (!res.ok) {
+    throw new Error('Could not load Carrier Setup Packet (HTTP ' + res.status + '). Make sure TruckitTools_Carrier_Setup_Packet.pdf is uploaded next to loads.html.');
+  }
+  const blob = await res.blob();
+  return new File([blob], CARRIER_PACKET_FILENAME, { type: 'application/pdf' });
+}
+
+function buildCarrierPacketEmailParts(load) {
+  const to = (load && load.carrierEmail) ? load.carrierEmail.trim() : '';
+  const carrierName = (load && load.carrierName) ? load.carrierName.trim() : '';
+  const subject = 'TruckitTools Carrier Setup Packet' + (carrierName ? (' – ' + carrierName) : '');
+
+  const greeting = carrierName ? ('Hello ' + carrierName + ',') : 'Hello,';
+  const lines = [
+    greeting,
+    '',
+    'Please find the TruckitTools Carrier Setup Packet. Complete and return the required documents so we can finish setting you up as an approved carrier.',
+    '',
+    'The packet includes:',
+    '• Request for Certificate of Insurance',
+    '• Carrier Safety Questionnaire',
+    '• Business References form',
+    '• Carrier Profile & Equipment Information',
+    '• Transportation Brokerage Contract',
+    '• W-9 instructions',
+    '',
+    'If you have any questions, call 804-577-7423.',
+    '',
+    'Thank you,',
+    'TruckitTools',
+    '23 Winnard Rd. Hampton, VA 23669'
+  ];
+
+  return {
+    to: to,
+    subject: subject,
+    body: lines.join('\n')
+  };
+}
+
+/**
+ * Send Carrier Packet:
+ * - Mobile: Web Share API with PDF attached
+ * - Desktop: download PDF + open mailto
+ */
+async function sendCarrierPacket() {
+  const load = getCurrentDetailLoad(); // may be null if somehow missing — still allow send
+  let file;
+  try {
+    file = await fetchCarrierPacketFile();
+  } catch (err) {
+    alert(err.message || 'Could not load Carrier Setup Packet PDF.');
+    return;
+  }
+
+  const email = buildCarrierPacketEmailParts(load);
+
+  const canShareFiles = isMobileDevice() &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function';
+
+  if (canShareFiles) {
+    try {
+      const shareData = {
+        files: [file],
+        title: email.subject,
+        text: email.body
+      };
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch (err) {
+      if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+        return;
+      }
+      console.warn('Share failed, falling back:', err);
+    }
+  }
+
+  // Desktop / fallback: trigger download then open mailto
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = CARRIER_PACKET_FILENAME;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  setTimeout(() => {
+    openMailto(email.to, email.subject, email.body, CARRIER_PACKET_FILENAME);
+  }, 400);
+}
+
+// Initial render
+renderLoadList();
+</script>
+
+<!-- BOL Bill-To Modal -->
+<div id="bolModal" class="modal-overlay hidden" onclick="if(event.target===this)closeBolModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3>Bill To — Generate BOL</h3>
+    <p style="font-size:13px; color:#94a3b8; margin:0 0 12px 0;">These details print on the Bill of Lading under Third Party / Bill To.</p>
+    <span class="field-label">Bill To Name</span>
+    <input type="text" id="bolBillName" placeholder="Company name">
+    <span class="field-label">Bill To Address</span>
+    <input type="text" id="bolBillAddress" placeholder="Street address">
+    <span class="field-label">Bill To City</span>
+    <input type="text" id="bolBillCity" placeholder="City">
+    <div class="form-row">
+      <div>
+        <span class="field-label">Bill To State</span>
+        <input type="text" id="bolBillState" placeholder="ST" maxlength="2">
+      </div>
+      <div>
+        <span class="field-label">Bill To Zip Code</span>
+        <input type="text" id="bolBillZip" placeholder="Zip">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button onclick="submitBolModal()">Generate BOL</button>
+      <button class="cancel" onclick="closeBolModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
