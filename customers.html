@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruckitTools – My Customers</title>
+<style>
+body { margin:0; font-family:Arial,sans-serif; background:#000; color:#e5e7eb; }
+header { background:#020617; color:#22c55e; padding:12px 15px; text-align:center; border-bottom:1px solid #14532d; position:relative; min-height:72px; }
+header .logo { height:68px; width:auto; max-width:min(320px, 70vw); object-fit:contain; display:inline-block; vertical-align:middle; }
+header .back-link { color:#000; background:#16a34a; text-decoration:none; font-size:13px; font-weight:bold; position:absolute; left:12px; top:50%; transform:translateY(-50%); padding:8px 12px; border-radius:6px; z-index:2; }
+header .header-sub { margin:4px 0 0 0; font-size:13px; color:#94a3b8; }
+.container { padding:15px; max-width:800px; margin:0 auto; }
+.card { background:#020617; border-radius:8px; padding:15px; margin-bottom:15px; border:1px solid #14532d; }
+button { background:#16a34a; color:#000; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; font-size:16px; margin:5px 0; }
+button.cancel { background:#dc2626; color:#fff; }
+button.secondary { background:#1e40af; color:#fff; }
+input, textarea, select { padding:10px; width:100%; margin-bottom:12px; background:#000; color:#22c55e; border:1px solid #14532d; border-radius:6px; font-size:16px; box-sizing:border-box; }
+.hidden { display:none; }
+.field-label { font-size:14px; color:#94a3b8; margin-bottom:4px; display:block; }
+.section-title { color:#22c55e; font-size:15px; font-weight:bold; margin:18px 0 10px 0; border-bottom:1px solid #14532d; padding-bottom:6px; }
+.customer-item { background:#022c22; padding:12px; border-radius:6px; margin-bottom:10px; border:1px solid #14532d; cursor:pointer; }
+.customer-item:hover { border-color:#22c55e; }
+.customer-item h4 { margin:0 0 6px 0; color:#22c55e; }
+.customer-item p { margin:4px 0; font-size:13px; color:#94a3b8; }
+.loc-tag { display:inline-block; background:#14532d; color:#86efac; font-size:12px; padding:2px 8px; border-radius:4px; margin:2px 4px 2px 0; }
+.actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.empty-state { text-align:center; padding:40px 20px; color:#64748b; }
+@media (max-width:600px) {
+  header { padding-top:44px; padding-bottom:10px; }
+  header .logo { height:48px; max-width:60vw; }
+  header .back-link { left:10px; top:12px; transform:none; font-size:12px; padding:6px 10px; }
+}
+
+header .header-right-links {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+header .nav-peer-link {
+  color: #000;
+  background: #1e40af;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 7px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  white-space: nowrap;
+}
+header .nav-peer-link:hover { background: #2563eb; }
+@media (max-width: 600px) {
+  header .header-right-links { right: 8px; top: 10px; transform: none; }
+  header .nav-peer-link { font-size: 11px; padding: 6px 10px; }
+}
+
+</style>
+</head>
+<body>
+
+<header>
+<a href="loads.html" class="back-link">← Loads</a>
+  <div class="header-right-links">
+    <a href="carriers.html" class="nav-peer-link">My Carriers</a>
+  </div>
+<a href="index.html" style="display:inline-block; line-height:0;"><img src="logo.png" alt="TruckitTools" class="logo" onerror="this.style.display='none'"></a>
+<p class="header-sub">My Customers</p>
+</header>
+
+<div class="container">
+
+<div class="card" id="listView">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h3 style="margin:0;">Customer Database</h3>
+    <button onclick="showCreateForm()">+ Add Customer</button>
+  </div>
+  <p style="font-size:13px; color:#94a3b8;">Customers appear in the Load form dropdown. Add preset pickup & delivery locations per customer.</p>
+  <div id="customerList"></div>
+</div>
+
+<div class="card hidden" id="formView">
+  <h3 id="formTitle">New Customer</h3>
+  <input type="hidden" id="editId">
+
+  <span class="field-label">Customer Name *</span>
+  <input type="text" id="custName" placeholder="Company or contact name">
+
+  <div class="section-title">Addresses</div>
+  <span class="field-label">Corporate Address</span>
+  <input type="text" id="corpAddress" placeholder="Corporate / main address">
+  <div style="margin:-4px 0 10px 0;">
+    <button type="button" class="secondary" style="font-size:13px; padding:6px 10px; margin:0;" onclick="copyCorpToBilling()">Same as Corporate → Billing</button>
+  </div>
+  <span class="field-label">Billing Address</span>
+  <input type="text" id="billingAddress" placeholder="Billing address">
+
+  <div class="section-title">Contact Information</div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:140px;">
+      <span class="field-label">Main Phone</span>
+      <input type="tel" id="mainPhone" placeholder="Main phone">
+    </div>
+    <div style="flex:1; min-width:140px;">
+      <span class="field-label">Billing Phone</span>
+      <input type="tel" id="billingPhone" placeholder="Billing phone">
+    </div>
+  </div>
+  <span class="field-label">Fax</span>
+  <input type="tel" id="fax" placeholder="Fax number">
+  <span class="field-label">Email</span>
+  <input type="email" id="email" placeholder="Primary email">
+  <span class="field-label">Billing Email</span>
+  <input type="email" id="billingEmail" placeholder="Billing email">
+
+  <div class="section-title">Pickup Locations</div>
+  <p style="font-size:13px; color:#94a3b8; margin-top:-6px;">Add addresses this customer ships from.</p>
+  <div id="pickupList"></div>
+  <div style="display:flex; gap:8px;">
+    <input type="text" id="newPickup" placeholder="Add pickup address" style="margin-bottom:0; flex:1;">
+    <button type="button" onclick="addPickup()" style="margin:0; white-space:nowrap;">Add</button>
+  </div>
+
+  <div class="section-title">Delivery Locations</div>
+  <p style="font-size:13px; color:#94a3b8; margin-top:-6px;">Add addresses this customer ships to.</p>
+  <div id="deliveryList"></div>
+  <div style="display:flex; gap:8px;">
+    <input type="text" id="newDelivery" placeholder="Add delivery address" style="margin-bottom:0; flex:1;">
+    <button type="button" onclick="addDelivery()" style="margin:0; white-space:nowrap;">Add</button>
+  </div>
+
+  <span class="field-label" style="margin-top:16px;">Notes (optional)</span>
+  <textarea id="custNotes" rows="2" placeholder="Billing contacts, dock hours, etc."></textarea>
+
+  <div class="actions">
+    <button onclick="saveCustomer()">Save Customer</button>
+    <button class="secondary" onclick="showList()">Cancel</button>
+    <button class="cancel hidden" id="deleteBtn" onclick="deleteCustomer()">Delete</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const CUSTOMERS_KEY = 'truckit_customers';
+let draftPickups = [];
+let draftDeliveries = [];
+
+function getCustomers() {
+  try {
+    const raw = localStorage.getItem(CUSTOMERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+function copyCorpToBilling() {
+  document.getElementById('billingAddress').value = document.getElementById('corpAddress').value;
+}
+
+function saveCustomers(list) {
+  localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(list));
+}
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function uid() {
+  return 'C-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+}
+
+function renderList() {
+  const list = getCustomers().slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const el = document.getElementById('customerList');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state">No customers yet.<br>Tap + Add Customer to build your database.</div>';
+    return;
+  }
+  el.innerHTML = list.map(c => `
+    <div class="customer-item" onclick="editCustomer('${c.id}')">
+      <h4>${escapeHtml(c.name)}</h4>
+      ${c.mainPhone || c.email ? `<p>${c.mainPhone ? escapeHtml(c.mainPhone) : ''}${c.mainPhone && c.email ? ' · ' : ''}${c.email ? escapeHtml(c.email) : ''}</p>` : ''}
+      ${c.corpAddress ? `<p style="font-size:12px;">${escapeHtml(c.corpAddress)}</p>` : ''}
+      <p><strong>Pickups:</strong> ${(c.pickupLocations||[]).length ? (c.pickupLocations||[]).map(l => '<span class="loc-tag">'+escapeHtml(l)+'</span>').join('') : '—'}</p>
+      <p><strong>Deliveries:</strong> ${(c.deliveryLocations||[]).length ? (c.deliveryLocations||[]).map(l => '<span class="loc-tag">'+escapeHtml(l)+'</span>').join('') : '—'}</p>
+    </div>
+  `).join('');
+}
+
+function renderLocTags() {
+  document.getElementById('pickupList').innerHTML = draftPickups.map((l,i) =>
+    `<span class="loc-tag">${escapeHtml(l)} <a href="#" onclick="removePickup(${i});return false;" style="color:#fca5a5;text-decoration:none;">×</a></span>`
+  ).join('') || '<span style="color:#64748b;font-size:13px;">None yet</span>';
+  document.getElementById('deliveryList').innerHTML = draftDeliveries.map((l,i) =>
+    `<span class="loc-tag">${escapeHtml(l)} <a href="#" onclick="removeDelivery(${i});return false;" style="color:#fca5a5;text-decoration:none;">×</a></span>`
+  ).join('') || '<span style="color:#64748b;font-size:13px;">None yet</span>';
+}
+
+function addPickup() {
+  const v = document.getElementById('newPickup').value.trim();
+  if (!v) return;
+  if (!draftPickups.includes(v)) draftPickups.push(v);
+  document.getElementById('newPickup').value = '';
+  renderLocTags();
+}
+function addDelivery() {
+  const v = document.getElementById('newDelivery').value.trim();
+  if (!v) return;
+  if (!draftDeliveries.includes(v)) draftDeliveries.push(v);
+  document.getElementById('newDelivery').value = '';
+  renderLocTags();
+}
+function removePickup(i) { draftPickups.splice(i,1); renderLocTags(); }
+function removeDelivery(i) { draftDeliveries.splice(i,1); renderLocTags(); }
+
+function showList() {
+  document.getElementById('formView').classList.add('hidden');
+  document.getElementById('listView').classList.remove('hidden');
+  renderList();
+}
+function showCreateForm() {
+  document.getElementById('formTitle').textContent = 'New Customer';
+  document.getElementById('editId').value = '';
+  document.getElementById('custName').value = '';
+  document.getElementById('corpAddress').value = '';
+  document.getElementById('billingAddress').value = '';
+  document.getElementById('mainPhone').value = '';
+  document.getElementById('billingPhone').value = '';
+  document.getElementById('fax').value = '';
+  document.getElementById('email').value = '';
+  document.getElementById('billingEmail').value = '';
+  document.getElementById('custNotes').value = '';
+  draftPickups = [];
+  draftDeliveries = [];
+  renderLocTags();
+  document.getElementById('deleteBtn').classList.add('hidden');
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+}
+function editCustomer(id) {
+  const c = getCustomers().find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('formTitle').textContent = 'Edit Customer';
+  document.getElementById('editId').value = c.id;
+  document.getElementById('custName').value = c.name || '';
+  document.getElementById('corpAddress').value = c.corpAddress || '';
+  document.getElementById('billingAddress').value = c.billingAddress || '';
+  document.getElementById('mainPhone').value = c.mainPhone || '';
+  document.getElementById('billingPhone').value = c.billingPhone || '';
+  document.getElementById('fax').value = c.fax || '';
+  document.getElementById('email').value = c.email || '';
+  document.getElementById('billingEmail').value = c.billingEmail || '';
+  document.getElementById('custNotes').value = c.notes || '';
+  draftPickups = (c.pickupLocations || []).slice();
+  draftDeliveries = (c.deliveryLocations || []).slice();
+  renderLocTags();
+  document.getElementById('deleteBtn').classList.remove('hidden');
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+}
+function saveCustomer() {
+  const name = document.getElementById('custName').value.trim();
+  if (!name) { alert('Customer name is required.'); return; }
+  const editId = document.getElementById('editId').value;
+  const list = getCustomers();
+  const now = Date.now();
+  const payload = {
+    name,
+    corpAddress: document.getElementById('corpAddress').value.trim(),
+    billingAddress: document.getElementById('billingAddress').value.trim(),
+    mainPhone: document.getElementById('mainPhone').value.trim(),
+    billingPhone: document.getElementById('billingPhone').value.trim(),
+    fax: document.getElementById('fax').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    billingEmail: document.getElementById('billingEmail').value.trim(),
+    pickupLocations: draftPickups.slice(),
+    deliveryLocations: draftDeliveries.slice(),
+    notes: document.getElementById('custNotes').value.trim(),
+    updatedAt: now
+  };
+  if (editId) {
+    const i = list.findIndex(c => c.id === editId);
+    if (i >= 0) list[i] = { ...list[i], ...payload };
+  } else {
+    list.push({ id: uid(), createdAt: now, ...payload });
+  }
+  saveCustomers(list);
+  showList();
+}
+function deleteCustomer() {
+  const id = document.getElementById('editId').value;
+  if (!id || !confirm('Delete this customer?')) return;
+  saveCustomers(getCustomers().filter(c => c.id !== id));
+  showList();
+}
+
+renderList();
+</script>
+</body>
+</html>
