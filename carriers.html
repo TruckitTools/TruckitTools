@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruckitTools – My Carriers</title>
+<style>
+body { margin:0; font-family:Arial,sans-serif; background:#000; color:#e5e7eb; }
+header { background:#020617; color:#22c55e; padding:12px 15px; text-align:center; border-bottom:1px solid #14532d; position:relative; min-height:72px; }
+header .logo { height:68px; width:auto; max-width:min(320px, 70vw); object-fit:contain; display:inline-block; vertical-align:middle; }
+header .back-link { color:#000; background:#16a34a; text-decoration:none; font-size:13px; font-weight:bold; position:absolute; left:12px; top:50%; transform:translateY(-50%); padding:8px 12px; border-radius:6px; z-index:2; }
+header .header-sub { margin:4px 0 0 0; font-size:13px; color:#94a3b8; }
+.container { padding:15px; max-width:900px; margin:0 auto; }
+.card { background:#020617; border-radius:8px; padding:15px; margin-bottom:15px; border:1px solid #14532d; }
+button { background:#16a34a; color:#000; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; font-size:16px; margin:5px 0; }
+button.cancel { background:#dc2626; color:#fff; }
+button.secondary { background:#1e40af; color:#fff; }
+input, textarea, select { padding:10px; width:100%; margin-bottom:12px; background:#000; color:#22c55e; border:1px solid #14532d; border-radius:6px; font-size:16px; box-sizing:border-box; }
+.hidden { display:none; }
+.field-label { font-size:14px; color:#94a3b8; margin-bottom:4px; display:block; }
+.section-title { color:#22c55e; font-size:15px; font-weight:bold; margin:18px 0 10px 0; border-bottom:1px solid #14532d; padding-bottom:6px; }
+.carrier-item { background:#022c22; padding:12px; border-radius:6px; margin-bottom:10px; border:1px solid #14532d; cursor:pointer; }
+.carrier-item:hover { border-color:#22c55e; }
+.carrier-item h4 { margin:0 0 6px 0; color:#22c55e; }
+.carrier-item p { margin:4px 0; font-size:13px; color:#94a3b8; }
+.actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.empty-state { text-align:center; padding:40px 20px; color:#64748b; }
+.form-row { display:flex; gap:10px; flex-wrap:wrap; }
+.form-row > div { flex:1; min-width:140px; }
+.chk-grid { display:flex; flex-wrap:wrap; gap:8px 14px; margin-bottom:12px; }
+.chk { display:flex; align-items:center; gap:6px; font-size:13px; color:#e2e8f0; white-space:nowrap; }
+.chk input { width:auto; margin:0; accent-color:#22c55e; }
+.inline-check { display:flex; align-items:center; gap:8px; margin:8px 0 12px; font-size:13px; color:#e2e8f0; }
+.inline-check input { width:auto; margin:0; }
+@media (max-width:600px) {
+  header { padding-top:44px; padding-bottom:10px; }
+  header .logo { height:48px; max-width:60vw; }
+  header .back-link { left:10px; top:12px; transform:none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <a href="loads.html" class="back-link">← Loads</a>
+  <a href="loads.html"><img src="logo.png" alt="TruckitTools" class="logo"></a>
+  <p class="header-sub">My Carriers</p>
+</header>
+
+<div class="container">
+<div class="card" id="listView">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <h2 style="margin:0;">Carriers</h2>
+    <button onclick="showCreateForm()">+ New Carrier</button>
+  </div>
+  <div id="carrierList" style="margin-top:14px;"></div>
+</div>
+
+<div class="card hidden" id="formView">
+  <h2 id="formTitle" style="margin-top:0;">New Carrier</h2>
+  <input type="hidden" id="editCarrierId" value="">
+
+  <div class="section-title">General Information</div>
+  <span class="field-label">Carrier Name *</span>
+  <input type="text" id="carrierName" placeholder="Carrier name">
+  <div class="form-row">
+    <div>
+      <span class="field-label">Legal Name</span>
+      <input type="text" id="legalName" placeholder="Legal name">
+    </div>
+    <div>
+      <span class="field-label">DBA Name</span>
+      <input type="text" id="dbaName" placeholder="DBA name">
+    </div>
+  </div>
+  <div class="form-row">
+    <div>
+      <span class="field-label">MC Number</span>
+      <input type="text" id="mcNumber" placeholder="MC number">
+    </div>
+    <div>
+      <span class="field-label">SCAC</span>
+      <input type="text" id="scac" placeholder="SCAC">
+    </div>
+  </div>
+  <div class="form-row">
+    <div>
+      <span class="field-label">USDOT Number</span>
+      <input type="text" id="usdotNumber" placeholder="USDOT number">
+    </div>
+    <div>
+      <span class="field-label">C-TPAT Number</span>
+      <input type="text" id="ctpatNumber" placeholder="C-TPAT number">
+    </div>
+  </div>
+  <div class="form-row">
+    <div>
+      <span class="field-label">DOT Number</span>
+      <input type="text" id="dotNumber" placeholder="DOT number">
+    </div>
+    <div>
+      <span class="field-label">DOT State</span>
+      <input type="text" id="dotState" placeholder="State" maxlength="2">
+    </div>
+  </div>
+  <label class="inline-check"><input type="checkbox" id="dotOnly"> DOT Only</label>
+  <div class="form-row">
+    <div>
+      <span class="field-label">Tax ID Number</span>
+      <input type="text" id="taxId" placeholder="Tax ID">
+    </div>
+    <div>
+      <span class="field-label">Account Number</span>
+      <input type="text" id="accountNumber" placeholder="Account number">
+    </div>
+  </div>
+
+  <div class="section-title">Addresses</div>
+  <span class="field-label">Corporate Address</span>
+  <input type="text" id="corpAddress" placeholder="Corporate address">
+  <span class="field-label">Remit-To Address</span>
+  <input type="text" id="remitAddress" placeholder="Remit-to address">
+
+  <div class="section-title">Factoring Company Information</div>
+  <span class="field-label">Factoring Company</span>
+  <input type="text" id="factoringCompany" placeholder="Factoring company name">
+  <label class="inline-check"><input type="checkbox" id="useFactoring"> Use Factoring Company</label>
+  <span class="field-label">GP Vendor Class</span>
+  <input type="text" id="gpVendorClass" placeholder="GP vendor class">
+
+  <div class="section-title">Contact Information</div>
+  <div class="form-row">
+    <div>
+      <span class="field-label">Main Contact</span>
+      <input type="text" id="mainContact" placeholder="Main contact name">
+    </div>
+    <div>
+      <span class="field-label">As Of</span>
+      <input type="date" id="asOf">
+    </div>
+  </div>
+  <span class="field-label">Last Call</span>
+  <input type="datetime-local" id="lastCall">
+  <div class="form-row">
+    <div>
+      <span class="field-label">Main Phone</span>
+      <input type="tel" id="mainPhone" placeholder="Main phone">
+    </div>
+    <div>
+      <span class="field-label">Alt. Phone 2</span>
+      <input type="tel" id="altPhone2" placeholder="Alt phone 2">
+    </div>
+  </div>
+  <div class="form-row">
+    <div>
+      <span class="field-label">Alternate Phone</span>
+      <input type="tel" id="alternatePhone" placeholder="Alternate phone">
+    </div>
+    <div>
+      <span class="field-label">Fax</span>
+      <input type="tel" id="fax" placeholder="Fax">
+    </div>
+  </div>
+  <div class="form-row">
+    <div>
+      <span class="field-label">Email</span>
+      <input type="email" id="email" placeholder="Email">
+    </div>
+    <div>
+      <span class="field-label">Website</span>
+      <input type="url" id="website" placeholder="https://">
+    </div>
+  </div>
+
+  <div class="section-title">Profile Information</div>
+  <div class="form-row">
+    <div>
+      <span class="field-label">Target Days to Pay</span>
+      <input type="number" id="targetDaysToPay" value="21" min="0">
+    </div>
+    <div style="display:flex;align-items:flex-end;">
+      <label class="inline-check"><input type="checkbox" id="ownerOperator"> Owner Operator</label>
+    </div>
+  </div>
+  <span class="field-label">Coverage</span>
+  <textarea id="coverage" rows="2" placeholder="Coverage notes"></textarea>
+
+  <span class="field-label">Equipment</span>
+  <div class="chk-grid" id="equipmentGrid">
+<label class="chk"><input type="checkbox" data-group="equipment" value="28'"> 28'</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="40'"> 40'</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="45'"> 45'</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="48'"> 48'</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="53'"> 53'</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="REEF"> REEF</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="FLAT"> FLAT</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="SD"> SD</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="RAIL"> RAIL</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="AUTO"> AUTO</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="ENDP"> ENDP</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="HS"> HS</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="PO"> PO</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="MAXI"> MAXI</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="TANK"> TANK</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="LQR"> LQR</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="VAN"> VAN</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="VENT"> VENT</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="DRAY"> DRAY</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="CURT"> CURT</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="DD"> DD</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="HOPP"> HOPP</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="RGN"> RGN</label>
+<label class="chk"><input type="checkbox" data-group="equipment" value="LB"> LB</label>
+  </div>
+
+  <span class="field-label">Certifications</span>
+  <div class="chk-grid" id="certGrid">
+<label class="chk"><input type="checkbox" data-group="certifications" value="SmartWay"> SmartWay</label>
+<label class="chk"><input type="checkbox" data-group="certifications" value="TWIC"> TWIC</label>
+<label class="chk"><input type="checkbox" data-group="certifications" value="CARB"> CARB</label>
+<label class="chk"><input type="checkbox" data-group="certifications" value="Hazmat"> Hazmat</label>
+<label class="chk"><input type="checkbox" data-group="certifications" value="USPS"> USPS</label>
+<label class="chk"><input type="checkbox" data-group="certifications" value="Trailer Interchange"> Trailer Interchange</label>
+  </div>
+
+  <span class="field-label">Services</span>
+  <div class="chk-grid" id="svcGrid">
+<label class="chk"><input type="checkbox" data-group="services" value="Team Drivers"> Team Drivers</label>
+<label class="chk"><input type="checkbox" data-group="services" value="Drop Trailer"> Drop Trailer</label>
+<label class="chk"><input type="checkbox" data-group="services" value="Satellite Equipment"> Satellite Equipment</label>
+<label class="chk"><input type="checkbox" data-group="services" value="Expedited"> Expedited</label>
+<label class="chk"><input type="checkbox" data-group="services" value="Pallet Exchange"> Pallet Exchange</label>
+<label class="chk"><input type="checkbox" data-group="services" value="Truckertools ELD Tracking"> Truckertools ELD Tracking</label>
+<label class="chk"><input type="checkbox" data-group="services" value="Macropoint ELD Tracking"> Macropoint ELD Tracking</label>
+  </div>
+
+  <div class="form-row">
+    <div>
+      <span class="field-label">Power Units</span>
+      <input type="number" id="powerUnits" value="0" min="0">
+    </div>
+    <div>
+      <span class="field-label">Number of Vehicles</span>
+      <input type="number" id="numberOfVehicles" value="0" min="0">
+    </div>
+  </div>
+  <div class="form-row">
+    <div>
+      <span class="field-label">Owned Tractors</span>
+      <input type="number" id="ownedTractors" value="0" min="0">
+    </div>
+    <div>
+      <span class="field-label">Leased Tractors</span>
+      <input type="number" id="leasedTractors" value="0" min="0">
+    </div>
+  </div>
+  <span class="field-label">Total Drivers</span>
+  <input type="number" id="totalDrivers" value="0" min="0">
+
+  <span class="field-label">Notes</span>
+  <textarea id="notes" rows="3" placeholder="Additional notes"></textarea>
+
+  <div class="actions">
+    <button onclick="saveCarrier()">Save Carrier</button>
+    <button class="secondary" onclick="showListView()">Cancel</button>
+    <button class="cancel hidden" id="deleteBtn" onclick="deleteCurrentCarrier()">Delete</button>
+  </div>
+</div>
+</div>
+
+<script>
+const CARRIERS_KEY = 'truckit_carriers';
+
+function getCarriers() {
+  try {
+    const raw = localStorage.getItem(CARRIERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCarriers(list) {
+  localStorage.setItem(CARRIERS_KEY, JSON.stringify(list));
+}
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function uid() {
+  return 'cr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function getChecked(group) {
+  return Array.from(document.querySelectorAll('input[data-group="' + group + '"]:checked')).map(el => el.value);
+}
+
+function setChecked(group, values) {
+  const set = new Set(values || []);
+  document.querySelectorAll('input[data-group="' + group + '"]').forEach(el => {
+    el.checked = set.has(el.value);
+  });
+}
+
+function showListView() {
+  document.getElementById('listView').classList.remove('hidden');
+  document.getElementById('formView').classList.add('hidden');
+  renderList();
+}
+
+function showCreateForm() {
+  document.getElementById('formTitle').textContent = 'New Carrier';
+  document.getElementById('editCarrierId').value = '';
+  clearForm();
+  document.getElementById('deleteBtn').classList.add('hidden');
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+}
+
+function clearForm() {
+  [
+    'carrierName','legalName','dbaName','mcNumber','scac','usdotNumber','ctpatNumber',
+    'dotNumber','dotState','taxId','accountNumber','corpAddress','remitAddress',
+    'factoringCompany','gpVendorClass','mainContact','asOf','lastCall','mainPhone',
+    'altPhone2','alternatePhone','fax','email','website','coverage','notes'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('dotOnly').checked = false;
+  document.getElementById('useFactoring').checked = false;
+  document.getElementById('ownerOperator').checked = false;
+  document.getElementById('targetDaysToPay').value = '21';
+  ['powerUnits','numberOfVehicles','ownedTractors','leasedTractors','totalDrivers'].forEach(id => {
+    document.getElementById(id).value = '0';
+  });
+  setChecked('equipment', []);
+  setChecked('certifications', []);
+  setChecked('services', []);
+}
+
+function editCarrier(id) {
+  const c = getCarriers().find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('formTitle').textContent = 'Edit Carrier';
+  document.getElementById('editCarrierId').value = c.id;
+  document.getElementById('carrierName').value = c.carrierName || '';
+  document.getElementById('legalName').value = c.legalName || '';
+  document.getElementById('dbaName').value = c.dbaName || '';
+  document.getElementById('mcNumber').value = c.mcNumber || '';
+  document.getElementById('scac').value = c.scac || '';
+  document.getElementById('usdotNumber').value = c.usdotNumber || '';
+  document.getElementById('ctpatNumber').value = c.ctpatNumber || '';
+  document.getElementById('dotNumber').value = c.dotNumber || '';
+  document.getElementById('dotState').value = c.dotState || '';
+  document.getElementById('dotOnly').checked = !!c.dotOnly;
+  document.getElementById('taxId').value = c.taxId || '';
+  document.getElementById('accountNumber').value = c.accountNumber || '';
+  document.getElementById('corpAddress').value = c.corpAddress || '';
+  document.getElementById('remitAddress').value = c.remitAddress || '';
+  document.getElementById('factoringCompany').value = c.factoringCompany || '';
+  document.getElementById('useFactoring').checked = !!c.useFactoring;
+  document.getElementById('gpVendorClass').value = c.gpVendorClass || '';
+  document.getElementById('mainContact').value = c.mainContact || '';
+  document.getElementById('asOf').value = c.asOf || '';
+  document.getElementById('lastCall').value = c.lastCall || '';
+  document.getElementById('mainPhone').value = c.mainPhone || '';
+  document.getElementById('altPhone2').value = c.altPhone2 || '';
+  document.getElementById('alternatePhone').value = c.alternatePhone || '';
+  document.getElementById('fax').value = c.fax || '';
+  document.getElementById('email').value = c.email || '';
+  document.getElementById('website').value = c.website || '';
+  document.getElementById('targetDaysToPay').value = c.targetDaysToPay != null ? c.targetDaysToPay : 21;
+  document.getElementById('ownerOperator').checked = !!c.ownerOperator;
+  document.getElementById('coverage').value = c.coverage || '';
+  setChecked('equipment', c.equipment || []);
+  setChecked('certifications', c.certifications || []);
+  setChecked('services', c.services || []);
+  document.getElementById('powerUnits').value = c.powerUnits != null ? c.powerUnits : 0;
+  document.getElementById('numberOfVehicles').value = c.numberOfVehicles != null ? c.numberOfVehicles : 0;
+  document.getElementById('ownedTractors').value = c.ownedTractors != null ? c.ownedTractors : 0;
+  document.getElementById('leasedTractors').value = c.leasedTractors != null ? c.leasedTractors : 0;
+  document.getElementById('totalDrivers').value = c.totalDrivers != null ? c.totalDrivers : 0;
+  document.getElementById('notes').value = c.notes || '';
+  document.getElementById('deleteBtn').classList.remove('hidden');
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('formView').classList.remove('hidden');
+}
+
+function collectPayload() {
+  return {
+    carrierName: document.getElementById('carrierName').value.trim(),
+    legalName: document.getElementById('legalName').value.trim(),
+    dbaName: document.getElementById('dbaName').value.trim(),
+    mcNumber: document.getElementById('mcNumber').value.trim(),
+    scac: document.getElementById('scac').value.trim(),
+    usdotNumber: document.getElementById('usdotNumber').value.trim(),
+    ctpatNumber: document.getElementById('ctpatNumber').value.trim(),
+    dotNumber: document.getElementById('dotNumber').value.trim(),
+    dotState: document.getElementById('dotState').value.trim().toUpperCase(),
+    dotOnly: document.getElementById('dotOnly').checked,
+    taxId: document.getElementById('taxId').value.trim(),
+    accountNumber: document.getElementById('accountNumber').value.trim(),
+    corpAddress: document.getElementById('corpAddress').value.trim(),
+    remitAddress: document.getElementById('remitAddress').value.trim(),
+    factoringCompany: document.getElementById('factoringCompany').value.trim(),
+    useFactoring: document.getElementById('useFactoring').checked,
+    gpVendorClass: document.getElementById('gpVendorClass').value.trim(),
+    mainContact: document.getElementById('mainContact').value.trim(),
+    asOf: document.getElementById('asOf').value,
+    lastCall: document.getElementById('lastCall').value,
+    mainPhone: document.getElementById('mainPhone').value.trim(),
+    altPhone2: document.getElementById('altPhone2').value.trim(),
+    alternatePhone: document.getElementById('alternatePhone').value.trim(),
+    fax: document.getElementById('fax').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    website: document.getElementById('website').value.trim(),
+    targetDaysToPay: parseInt(document.getElementById('targetDaysToPay').value, 10) || 0,
+    ownerOperator: document.getElementById('ownerOperator').checked,
+    coverage: document.getElementById('coverage').value.trim(),
+    equipment: getChecked('equipment'),
+    certifications: getChecked('certifications'),
+    services: getChecked('services'),
+    powerUnits: parseInt(document.getElementById('powerUnits').value, 10) || 0,
+    numberOfVehicles: parseInt(document.getElementById('numberOfVehicles').value, 10) || 0,
+    ownedTractors: parseInt(document.getElementById('ownedTractors').value, 10) || 0,
+    leasedTractors: parseInt(document.getElementById('leasedTractors').value, 10) || 0,
+    totalDrivers: parseInt(document.getElementById('totalDrivers').value, 10) || 0,
+    notes: document.getElementById('notes').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function saveCarrier() {
+  const name = document.getElementById('carrierName').value.trim();
+  if (!name) {
+    alert('Carrier Name is required.');
+    return;
+  }
+  const editId = document.getElementById('editCarrierId').value;
+  const list = getCarriers();
+  const payload = collectPayload();
+  if (editId) {
+    const idx = list.findIndex(c => c.id === editId);
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...payload };
+    }
+  } else {
+    list.push({ id: uid(), createdAt: new Date().toISOString(), ...payload });
+  }
+  saveCarriers(list);
+  showListView();
+}
+
+function deleteCurrentCarrier() {
+  const id = document.getElementById('editCarrierId').value;
+  if (!id) return;
+  if (!confirm('Delete this carrier? This cannot be undone.')) return;
+  saveCarriers(getCarriers().filter(c => c.id !== id));
+  showListView();
+}
+
+function renderList() {
+  const list = getCarriers().slice().sort((a, b) => (a.carrierName || '').localeCompare(b.carrierName || ''));
+  const el = document.getElementById('carrierList');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state">No carriers yet. Tap + New Carrier to add one.</div>';
+    return;
+  }
+  el.innerHTML = list.map(c => `
+    <div class="carrier-item" onclick="editCarrier('${c.id}')">
+      <h4>${escapeHtml(c.carrierName)}</h4>
+      <p>
+        ${c.mcNumber ? 'MC ' + escapeHtml(c.mcNumber) : ''}
+        ${c.mcNumber && c.usdotNumber ? ' · ' : ''}
+        ${c.usdotNumber ? 'USDOT ' + escapeHtml(c.usdotNumber) : ''}
+        ${(c.mcNumber || c.usdotNumber) && c.mainPhone ? ' · ' : ''}
+        ${c.mainPhone ? escapeHtml(c.mainPhone) : ''}
+      </p>
+      ${c.email ? '<p>' + escapeHtml(c.email) + '</p>' : ''}
+      ${c.corpAddress ? '<p style="font-size:12px;">' + escapeHtml(c.corpAddress) + '</p>' : ''}
+      ${(c.equipment && c.equipment.length) ? '<p style="font-size:12px;">Equipment: ' + escapeHtml(c.equipment.join(', ')) + '</p>' : ''}
+    </div>
+  `).join('');
+}
+
+renderList();
+</script>
+</body>
+</html>
