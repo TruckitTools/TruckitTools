@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TruckitRates – TruckitTools</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #000;
+    color: #e5e7eb;
+    min-height: 100vh;
+  }
+  header {
+    position: relative;
+    text-align: center;
+    padding: 14px 12px 10px;
+    border-bottom: 1px solid #14532d;
+    background: #020617;
+  }
+  header .home-link {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #16a34a;
+    color: #000;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 8px 12px;
+    border-radius: 6px;
+  }
+  header h1 { margin: 0; color: #22c55e; font-size: 22px; }
+  header p { margin: 4px 0 0; color: #64748b; font-size: 13px; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 16px 14px 40px; }
+  .card {
+    background: #0f172a;
+    border: 1px solid #14532d;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card h2 { margin: 0 0 12px; color: #22c55e; font-size: 17px; }
+  .field-label { display: block; font-size: 12px; color: #94a3b8; margin: 8px 0 4px; }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #14532d;
+    background: #000;
+    color: #22c55e;
+    font-size: 16px;
+  }
+  textarea { min-height: 72px; resize: vertical; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 80px 100px; gap: 8px; }
+  @media (max-width: 480px) {
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+  }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  button {
+    background: #16a34a;
+    color: #000;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button.secondary { background: #1e293b; color: #e2e8f0; }
+  button.danger { background: #7f1d1d; color: #fecaca; }
+  button.small { padding: 8px 12px; font-size: 13px; }
+  .muted { color: #64748b; font-size: 13px; }
+  .error { color: #fca5a5; font-size: 13px; margin-top: 8px; }
+  .ok { color: #86efac; font-size: 13px; margin-top: 8px; }
+  .lane-item {
+    background: #022c22;
+    border: 1px solid #14532d;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .lane-item h3 { margin: 0 0 6px; color: #22c55e; font-size: 15px; }
+  .lane-item p { margin: 3px 0; font-size: 13px; color: #94a3b8; }
+  .lane-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #14532d;
+    color: #86efac;
+    margin-left: 6px;
+  }
+  .market-panel {
+    background: #022c22;
+    border: 1px solid #22c55e;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .market-panel h3 {
+    margin: 0 0 8px;
+    color: #22c55e;
+    font-size: 15px;
+  }
+  .market-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .market-stat {
+    background: #020617;
+    border: 1px solid #14532d;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .market-stat .label { font-size: 11px; color: #64748b; text-transform: uppercase; }
+  .market-stat .value { font-size: 18px; font-weight: bold; color: #86efac; margin-top: 2px; }
+  .market-stat .sub { font-size: 11px; color: #94a3b8; }
+  .lane-match {
+    background: #020617;
+    border-left: 3px solid #22c55e;
+    padding: 8px 10px;
+    margin-top: 8px;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+  }
+  .lane-match strong { color: #86efac; }
+  .top-lanes { margin-top: 8px; font-size: 12px; color: #94a3b8; }
+  .top-lanes li { margin: 3px 0; }
+  .api-config details {
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+  .api-config summary {
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .disclaimer {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 8px;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="home-link" href="index.html">← Home</a>
+  <h1>TruckitRates</h1>
+  <p>Lane criteria + market rate context</p>
+</header>
+
+<div class="wrap">
+
+  <div class="api-config">
+    <details id="apiDetails">
+      <summary>Freight Data Watch API key</summary>
+      <p class="muted" style="margin:8px 0;">Free tier: 100 requests/day. Key is stored in this browser (and optional hardcode below for GitHub Pages testing).</p>
+      <div class="field-label">API key</div>
+      <input type="password" id="fdwApiKey" placeholder="fdw_..." autocomplete="off">
+      <div class="btn-row">
+        <button type="button" class="small" onclick="saveApiKey()">Save key</button>
+        <button type="button" class="secondary small" onclick="refreshMarket()">Refresh market</button>
+      </div>
+      <div class="ok hidden" id="keyOk"></div>
+      <div class="error hidden" id="keyErr"></div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+      <h2 style="margin:0;">Market rate context</h2>
+      <button type="button" class="secondary small" onclick="refreshMarket()">Refresh</button>
+    </div>
+    <div id="marketPanel">
+      <p class="muted">Loading market data…</p>
+    </div>
+    <p class="disclaimer">Estimates only — not a firm tender. Data from Freight Data Watch. Free API is market-level (national / top lanes), not exact ZIP-to-ZIP RateView quotes.</p>
+  </div>
+
+  <div class="card" id="formCard">
+    <h2 id="formTitle">New rate request</h2>
+    <input type="hidden" id="editId" value="">
+
+    <div class="field-label">Origin</div>
+    <div class="grid3">
+      <input type="text" id="originCity" placeholder="City">
+      <input type="text" id="originState" placeholder="ST" maxlength="2">
+      <input type="text" id="originZip" placeholder="ZIP">
+    </div>
+
+    <div class="field-label">Destination</div>
+    <div class="grid3">
+      <input type="text" id="destCity" placeholder="City">
+      <input type="text" id="destState" placeholder="ST" maxlength="2">
+      <input type="text" id="destZip" placeholder="ZIP">
+    </div>
+
+    <div class="grid2">
+      <div>
+        <div class="field-label">Equipment</div>
+        <select id="equipment">
+          <option value="">— Select —</option>
+          <option>Dry Van</option>
+          <option>Reefer</option>
+          <option>Flatbed</option>
+          <option>Step Deck</option>
+          <option>Power Only</option>
+          <option>Hotshot</option>
+          <option>Box Truck</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Weight (lbs)</div>
+        <input type="text" id="weight" placeholder="e.g. 42000" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <div class="field-label">Commodity</div>
+        <input type="text" id="commodity" placeholder="e.g. General freight">
+      </div>
+      <div>
+        <div class="field-label">Pieces / pallets</div>
+        <input type="text" id="pieces" placeholder="Optional">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <div class="field-label">Pickup date</div>
+        <input type="date" id="pickupDate">
+      </div>
+      <div>
+        <div class="field-label">Delivery date</div>
+        <input type="date" id="deliveryDate">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <div class="field-label">Miles (optional)</div>
+        <input type="text" id="miles" placeholder="e.g. 312" inputmode="numeric">
+      </div>
+      <div>
+        <div class="field-label">Load type</div>
+        <select id="loadType">
+          <option>FTL</option>
+          <option>LTL</option>
+          <option>Partial</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-label">Target rate / max (optional)</div>
+    <input type="text" id="targetRate" placeholder="e.g. 1800" inputmode="decimal">
+
+    <div class="field-label">Notes / accessorials</div>
+    <textarea id="notes" placeholder="Team, tarp, appointment, liftgate, hazmat, etc."></textarea>
+
+    <div class="btn-row">
+      <button type="button" onclick="saveRequest()">Save request</button>
+      <button type="button" class="secondary" onclick="clearForm()">Clear</button>
+    </div>
+    <div class="error hidden" id="formErr"></div>
+    <div class="ok hidden" id="formOk"></div>
+  </div>
+
+  <div class="card">
+    <h2>Saved requests</h2>
+    <p class="muted" style="margin-top:-6px;">Each card shows market context when data is available.</p>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="cloud-sync.js"></script>
+<script>
+const RATES_KEY = 'truckit_rate_requests';
+const FDW_KEY_STORAGE = 'truckit_fdw_api_key';
+
+/** TEMP: paste your FDW key here for GitHub Pages testing. Prefer browser Save key when possible. */
+const FDW_API_KEY_HARDCODE = 'fdw_d43814da489cbc0155ec564171119fa475adbf90a4f13f287fb705653e42b1dd';
+
+const FDW_BASE = 'https://app.freightdatawatch.com/api/v1';
+
+let marketCache = {
+  summary: null,
+  lanes: null,
+  fetchedAt: null,
+  error: null
+};
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function getApiKey() {
+  try {
+    const fromLs = localStorage.getItem(FDW_KEY_STORAGE);
+    if (fromLs && fromLs.trim()) return fromLs.trim();
+  } catch (e) {}
+  if (FDW_API_KEY_HARDCODE && FDW_API_KEY_HARDCODE.trim()) return FDW_API_KEY_HARDCODE.trim();
+  return '';
+}
+
+function saveApiKey() {
+  const el = document.getElementById('fdwApiKey');
+  const ok = document.getElementById('keyOk');
+  const err = document.getElementById('keyErr');
+  ok.classList.add('hidden');
+  err.classList.add('hidden');
+  const v = (el.value || '').trim();
+  if (!v) {
+    err.textContent = 'Enter an API key first.';
+    err.classList.remove('hidden');
+    return;
+  }
+  try {
+    localStorage.setItem(FDW_KEY_STORAGE, v);
+    ok.textContent = 'Key saved in this browser.';
+    ok.classList.remove('hidden');
+  } catch (e) {
+    err.textContent = 'Could not save key locally.';
+    err.classList.remove('hidden');
+    return;
+  }
+  refreshMarket();
+}
+
+function getRequests() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(RATES_KEY) || '[]');
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+function saveRequests(list) {
+  localStorage.setItem(RATES_KEY, JSON.stringify(list));
+  if (window.TruckitCloud && TruckitCloud.pushKeyFromLocal) {
+    try { TruckitCloud.pushKeyFromLocal(RATES_KEY); } catch (e) {}
+  }
+}
+
+function placeLine(city, state, zip) {
+  return [city, state, zip].filter(Boolean).join(', ').replace(/,\s*$/, '');
+}
+
+function fmtRate(n) {
+  if (n == null || n === '') return '—';
+  const x = Number(n);
+  if (!isFinite(x)) return escapeHtml(String(n));
+  return '$' + x.toFixed(2);
+}
+
+function fmtPct(s) {
+  if (s == null || s === '') return '';
+  return String(s);
+}
+
+async function fdwGet(path) {
+  const key = getApiKey();
+  if (!key) throw new Error('No API key. Open “Freight Data Watch API key” and save your key.');
+  const url = FDW_BASE + path;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + key,
+      'Accept': 'application/json'
+    }
+  });
+  if (!res.ok) {
+    let msg = 'HTTP ' + res.status;
+    try {
+      const j = await res.json();
+      if (j && j.error) msg = j.error;
+    } catch (e) {}
+    if (res.status === 401) msg = 'Invalid or missing API key.';
+    if (res.status === 429) msg = 'Daily free limit reached (100 req/day).';
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+async function refreshMarket() {
+  const panel = document.getElementById('marketPanel');
+  if (!getApiKey()) {
+    panel.innerHTML = '<p class="muted">Add your Freight Data Watch API key above to load market rates.</p>';
+    marketCache = { summary: null, lanes: null, fetchedAt: null, error: 'no_key' };
+    renderList();
+    return;
+  }
+  panel.innerHTML = '<p class="muted">Fetching /market/summary and /lanes…</p>';
+  try {
+    const [summary, lanes] = await Promise.all([
+      fdwGet('/market/summary'),
+      fdwGet('/lanes')
+    ]);
+    marketCache = {
+      summary: summary,
+      lanes: lanes,
+      fetchedAt: new Date().toISOString(),
+      error: null
+    };
+    renderMarketPanel();
+    renderList();
+  } catch (e) {
+    marketCache.error = (e && e.message) || 'Fetch failed';
+    panel.innerHTML = '<p class="error" style="margin:0;">' + escapeHtml(marketCache.error) + '</p>' +
+      '<p class="muted">If you see a CORS error in the browser console, the API may block browser calls from GitHub Pages. We can add a small proxy later.</p>';
+    renderList();
+  }
+}
+
+function pickSummaryObject(data) {
+  if (!data) return {};
+  if (data.market_summary) return data.market_summary;
+  if (data.summary) return data.summary;
+  return data;
+}
+
+function pickLanesArray(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.top_lanes)) return data.top_lanes;
+  if (Array.isArray(data.lanes)) return data.lanes;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+}
+
+function renderMarketPanel() {
+  const panel = document.getElementById('marketPanel');
+  const s = pickSummaryObject(marketCache.summary);
+  const lanes = pickLanesArray(marketCache.lanes).concat(pickLanesArray(marketCache.summary));
+  // dedupe lanes by origin-dest
+  const seen = {};
+  const uniqueLanes = [];
+  lanes.forEach(function (L) {
+    const o = (L.origin || L.origin_city || L.from || '').toString();
+    const d = (L.dest || L.destination || L.to || '').toString();
+    const k = o + '|' + d;
+    if (!o && !d) return;
+    if (seen[k]) return;
+    seen[k] = true;
+    uniqueLanes.push(L);
+  });
+
+  const spot = s.national_avg_spot_rate != null ? s.national_avg_spot_rate : (s.spot_rate || s.avg_spot || s.spot);
+  const contract = s.national_avg_contract_rate != null ? s.national_avg_contract_rate : (s.contract_rate || s.avg_contract);
+  const ltr = s.load_to_truck_ratio != null ? s.load_to_truck_ratio : s.ltr;
+  const diesel = s.diesel_price_per_gallon != null ? s.diesel_price_per_gallon : s.diesel;
+  const trend = s.trend || s.market_trend || '';
+  const capacity = s.capacity_index || s.capacity || '';
+
+  let html = '<div class="market-panel">';
+  html += '<div class="market-stats">';
+  html += '<div class="market-stat"><div class="label">National spot</div><div class="value">' +
+    (spot != null ? fmtRate(spot) + '<span class="sub"> /mi</span>' : '—') + '</div></div>';
+  html += '<div class="market-stat"><div class="label">National contract</div><div class="value">' +
+    (contract != null ? fmtRate(contract) + '<span class="sub"> /mi</span>' : '—') + '</div></div>';
+  html += '<div class="market-stat"><div class="label">Load-to-truck</div><div class="value">' +
+    (ltr != null ? escapeHtml(String(ltr)) : '—') + '</div></div>';
+  html += '<div class="market-stat"><div class="label">Diesel</div><div class="value">' +
+    (diesel != null ? ('$' + Number(diesel).toFixed(2) + '<span class="sub"> /gal</span>') : '—') + '</div></div>';
+  html += '</div>';
+
+  if (trend || capacity) {
+    html += '<p class="muted" style="margin:0 0 8px;">' +
+      (trend ? ('Trend: <strong style="color:#86efac;">' + escapeHtml(String(trend)) + '</strong> ') : '') +
+      (capacity ? (' · Capacity: <strong style="color:#86efac;">' + escapeHtml(String(capacity)) + '</strong>') : '') +
+      '</p>';
+  }
+
+  if (uniqueLanes.length) {
+    html += '<div class="top-lanes"><strong style="color:#86efac;">Top lanes</strong><ul style="margin:6px 0 0;padding-left:18px;">';
+    uniqueLanes.slice(0, 8).forEach(function (L) {
+      const o = L.origin || L.origin_city || L.from || '?';
+      const d = L.dest || L.destination || L.to || '?';
+      const rate = L.rate != null ? L.rate : (L.spot_rate != null ? L.spot_rate : L.avg_rate);
+      const ch = L.change_7d || L.change || '';
+      html += '<li>' + escapeHtml(String(o)) + ' → ' + escapeHtml(String(d)) +
+        (rate != null ? (' · <strong style="color:#86efac;">' + fmtRate(rate) + '/mi</strong>') : '') +
+        (ch ? (' <span style="color:#94a3b8;">(' + escapeHtml(fmtPct(ch)) + ')</span>') : '') +
+        '</li>';
+    });
+    html += '</ul></div>';
+  } else {
+    html += '<p class="muted">No top-lane list in response (structure may differ). Summary stats still shown when present.</p>';
+  }
+
+  if (marketCache.fetchedAt) {
+    html += '<p class="muted" style="margin:8px 0 0;font-size:11px;">Updated ' + escapeHtml(new Date(marketCache.fetchedAt).toLocaleString()) + '</p>';
+  }
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+function stateToken(st) {
+  return String(st || '').trim().toUpperCase().slice(0, 2);
+}
+
+function laneTokens(str) {
+  return String(str || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ').trim().split(/\s+/).filter(Boolean);
+}
+
+function matchLaneForRequest(r) {
+  const lanes = pickLanesArray(marketCache.lanes).concat(pickLanesArray(marketCache.summary));
+  if (!lanes.length) return null;
+  const oState = stateToken(r.originState);
+  const dState = stateToken(r.destState);
+  const oCity = (r.originCity || '').toUpperCase();
+  const dCity = (r.destCity || '').toUpperCase();
+
+  let best = null;
+  let bestScore = 0;
+  lanes.forEach(function (L) {
+    const o = String(L.origin || L.origin_city || L.from || '').toUpperCase();
+    const d = String(L.dest || L.destination || L.to || '').toUpperCase();
+    let score = 0;
+    if (oState && o.indexOf(oState) >= 0) score += 2;
+    if (dState && d.indexOf(dState) >= 0) score += 2;
+    if (oCity && o.indexOf(oCity.slice(0, 3)) >= 0) score += 1;
+    if (dCity && d.indexOf(dCity.slice(0, 3)) >= 0) score += 1;
+    // airport-style codes DAL/ATL etc.
+    laneTokens(oCity).forEach(function (t) { if (t.length >= 3 && o.indexOf(t) >= 0) score += 1; });
+    laneTokens(dCity).forEach(function (t) { if (t.length >= 3 && d.indexOf(t) >= 0) score += 1; });
+    if (score > bestScore) {
+      bestScore = score;
+      best = L;
+    }
+  });
+  if (bestScore >= 2) return { lane: best, score: bestScore };
+  return null;
+}
+
+function estimateFromMarket(r) {
+  const s = pickSummaryObject(marketCache.summary);
+  const spot = s.national_avg_spot_rate != null ? Number(s.national_avg_spot_rate) :
+    (s.spot_rate != null ? Number(s.spot_rate) : null);
+  const miles = r.miles ? Number(String(r.miles).replace(/,/g, '')) : null;
+  const match = matchLaneForRequest(r);
+  let rpm = null;
+  let source = '';
+  if (match && match.lane) {
+    const L = match.lane;
+    rpm = L.rate != null ? Number(L.rate) : (L.spot_rate != null ? Number(L.spot_rate) : null);
+    source = 'matched top lane';
+  }
+  if (rpm == null && spot != null && isFinite(spot)) {
+    rpm = spot;
+    source = 'national spot avg';
+  }
+  let total = null;
+  if (rpm != null && isFinite(rpm) && miles != null && isFinite(miles) && miles > 0) {
+    total = rpm * miles;
+  }
+  return { rpm: rpm, total: total, source: source, match: match };
+}
+
+function marketSnippetForRequest(r) {
+  if (marketCache.error === 'no_key') {
+    return '<div class="lane-match muted">Add API key to show market context.</div>';
+  }
+  if (marketCache.error && !marketCache.summary) {
+    return '<div class="lane-match" style="border-color:#7f1d1d;"><span style="color:#fca5a5;">Market data unavailable.</span></div>';
+  }
+  const est = estimateFromMarket(r);
+  if (est.rpm == null) {
+    return '<div class="lane-match muted">No rate context yet — refresh market panel.</div>';
+  }
+  let html = '<div class="lane-match">';
+  html += '<strong>Market context</strong> · ' + fmtRate(est.rpm) + '/mi';
+  if (est.total != null) {
+    html += ' · est. <strong>' + fmtRate(est.total) + '</strong> total';
+    if (r.miles) html += ' (' + escapeHtml(String(r.miles)) + ' mi)';
+  } else {
+    html += ' <span class="muted">(add miles for total estimate)</span>';
+  }
+  if (est.match && est.match.lane) {
+    const L = est.match.lane;
+    const o = L.origin || L.origin_city || L.from || '';
+    const d = L.dest || L.destination || L.to || '';
+    html += '<br><span class="muted">Near: ' + escapeHtml(String(o)) + ' → ' + escapeHtml(String(d));
+    if (L.change_7d) html += ' · 7d ' + escapeHtml(String(L.change_7d));
+    html += '</span>';
+  } else if (est.source) {
+    html += '<br><span class="muted">Based on ' + escapeHtml(est.source) + '</span>';
+  }
+  if (r.targetRate && est.total != null) {
+    const target = Number(String(r.targetRate).replace(/[$,]/g, ''));
+    if (isFinite(target) && target > 0) {
+      const diff = target - est.total;
+      const pct = (diff / est.total) * 100;
+      html += '<br><span class="muted">Target $' + target.toFixed(0) + ' is ' +
+        (diff >= 0 ? '+' : '') + pct.toFixed(0) + '% vs market est.</span>';
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+function clearForm() {
+  document.getElementById('editId').value = '';
+  document.getElementById('formTitle').textContent = 'New rate request';
+  ['originCity','originState','originZip','destCity','destState','destZip',
+   'weight','commodity','pieces','pickupDate','deliveryDate','miles','targetRate','notes'
+  ].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('equipment').value = '';
+  document.getElementById('loadType').value = 'FTL';
+  document.getElementById('formErr').classList.add('hidden');
+  document.getElementById('formOk').classList.add('hidden');
+}
+
+function saveRequest() {
+  const err = document.getElementById('formErr');
+  const ok = document.getElementById('formOk');
+  err.classList.add('hidden');
+  ok.classList.add('hidden');
+
+  const originCity = document.getElementById('originCity').value.trim();
+  const destCity = document.getElementById('destCity').value.trim();
+  const originState = document.getElementById('originState').value.trim().toUpperCase();
+  const destState = document.getElementById('destState').value.trim().toUpperCase();
+
+  if (!originCity && !document.getElementById('originZip').value.trim()) {
+    err.textContent = 'Enter origin city or ZIP.';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (!destCity && !document.getElementById('destZip').value.trim()) {
+    err.textContent = 'Enter destination city or ZIP.';
+    err.classList.remove('hidden');
+    return;
+  }
+
+  const editId = document.getElementById('editId').value;
+  const list = getRequests();
+  const row = {
+    originCity: originCity,
+    originState: originState,
+    originZip: document.getElementById('originZip').value.trim(),
+    destCity: destCity,
+    destState: destState,
+    destZip: document.getElementById('destZip').value.trim(),
+    equipment: document.getElementById('equipment').value,
+    weight: document.getElementById('weight').value.trim(),
+    commodity: document.getElementById('commodity').value.trim(),
+    pieces: document.getElementById('pieces').value.trim(),
+    pickupDate: document.getElementById('pickupDate').value,
+    deliveryDate: document.getElementById('deliveryDate').value,
+    miles: document.getElementById('miles').value.trim(),
+    loadType: document.getElementById('loadType').value,
+    targetRate: document.getElementById('targetRate').value.trim(),
+    notes: document.getElementById('notes').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (editId) {
+    const idx = list.findIndex(function (r) { return r.id === editId; });
+    if (idx >= 0) list[idx] = Object.assign({}, list[idx], row);
+  } else {
+    row.id = 'rate_' + Date.now().toString(36);
+    row.createdAt = row.updatedAt;
+    list.unshift(row);
+  }
+
+  saveRequests(list);
+  clearForm();
+  ok.textContent = 'Saved.';
+  ok.classList.remove('hidden');
+  renderList();
+}
+
+function editRequest(id) {
+  const r = getRequests().find(function (x) { return x.id === id; });
+  if (!r) return;
+  document.getElementById('editId').value = r.id;
+  document.getElementById('formTitle').textContent = 'Edit rate request';
+  document.getElementById('originCity').value = r.originCity || '';
+  document.getElementById('originState').value = r.originState || '';
+  document.getElementById('originZip').value = r.originZip || '';
+  document.getElementById('destCity').value = r.destCity || '';
+  document.getElementById('destState').value = r.destState || '';
+  document.getElementById('destZip').value = r.destZip || '';
+  document.getElementById('equipment').value = r.equipment || '';
+  document.getElementById('weight').value = r.weight || '';
+  document.getElementById('commodity').value = r.commodity || '';
+  document.getElementById('pieces').value = r.pieces || '';
+  document.getElementById('pickupDate').value = r.pickupDate || '';
+  document.getElementById('deliveryDate').value = r.deliveryDate || '';
+  document.getElementById('miles').value = r.miles || '';
+  document.getElementById('loadType').value = r.loadType || 'FTL';
+  document.getElementById('targetRate').value = r.targetRate || '';
+  document.getElementById('notes').value = r.notes || '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteRequest(id) {
+  if (!confirm('Delete this rate request?')) return;
+  saveRequests(getRequests().filter(function (r) { return r.id !== id; }));
+  if (document.getElementById('editId').value === id) clearForm();
+  renderList();
+}
+
+function copyLaneSummary(id) {
+  const r = getRequests().find(function (x) { return x.id === id; });
+  if (!r) return;
+  const origin = placeLine(r.originCity, r.originState, r.originZip) || '—';
+  const dest = placeLine(r.destCity, r.destState, r.destZip) || '—';
+  const est = estimateFromMarket(r);
+  const lines = [
+    origin + ' → ' + dest,
+    [r.equipment, r.loadType, r.weight ? (r.weight + ' lbs') : ''].filter(Boolean).join(' · '),
+    r.commodity ? ('Commodity: ' + r.commodity) : '',
+    r.pickupDate ? ('PU: ' + r.pickupDate) : '',
+    r.deliveryDate ? ('DEL: ' + r.deliveryDate) : '',
+    r.miles ? (r.miles + ' mi') : '',
+    r.targetRate ? ('Target: $' + r.targetRate) : '',
+    est.rpm != null ? ('Market: ' + fmtRate(est.rpm) + '/mi' + (est.total != null ? (' ~' + fmtRate(est.total)) : '')) : '',
+    r.notes || ''
+  ].filter(Boolean).join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(lines).then(function () {
+      alert('Lane summary copied.');
+    }).catch(function () {
+      prompt('Copy:', lines);
+    });
+  } else {
+    prompt('Copy:', lines);
+  }
+}
+
+function renderList() {
+  const list = getRequests();
+  const el = document.getElementById('list');
+  if (!list.length) {
+    el.innerHTML = '<p class="muted">No rate requests yet.</p>';
+    return;
+  }
+  el.innerHTML = list.map(function (r) {
+    const origin = placeLine(r.originCity, r.originState, r.originZip) || '—';
+    const dest = placeLine(r.destCity, r.destState, r.destZip) || '—';
+    return '<div class="lane-item">' +
+      '<h3>' + escapeHtml(origin) + ' → ' + escapeHtml(dest) +
+      (r.loadType ? '<span class="badge">' + escapeHtml(r.loadType) + '</span>' : '') + '</h3>' +
+      '<p>' + escapeHtml([r.equipment, r.weight ? (r.weight + ' lbs') : '', r.commodity].filter(Boolean).join(' · ') || 'No equipment/commodity') + '</p>' +
+      '<p>PU: ' + escapeHtml(r.pickupDate || '—') + ' · DEL: ' + escapeHtml(r.deliveryDate || '—') +
+      (r.miles ? (' · ' + escapeHtml(r.miles) + ' mi') : '') +
+      (r.targetRate ? (' · Target $' + escapeHtml(r.targetRate)) : '') + '</p>' +
+      (r.notes ? '<p>' + escapeHtml(r.notes) + '</p>' : '') +
+      marketSnippetForRequest(r) +
+      '<div class="lane-actions">' +
+      '<button type="button" class="secondary small" onclick="editRequest(\'' + r.id + '\')">Edit</button>' +
+      '<button type="button" class="secondary small" onclick="copyLaneSummary(\'' + r.id + '\')">Copy</button>' +
+      '<button type="button" class="danger small" onclick="deleteRequest(\'' + r.id + '\')">Delete</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+(async function boot() {
+  const keyInput = document.getElementById('fdwApiKey');
+  const existing = getApiKey();
+  if (existing && keyInput) {
+    keyInput.value = existing;
+    keyInput.placeholder = 'Key on file (hidden)';
+  }
+  if (!existing) {
+    try { document.getElementById('apiDetails').open = true; } catch (e) {}
+  }
+
+  if (window.TruckitCloud && TruckitCloud.syncOnBoot) {
+    try { await TruckitCloud.syncOnBoot(); } catch (e) {}
+  }
+  if (window.TruckitCloud && TruckitCloud.pullKey && TruckitCloud.isConfigured && TruckitCloud.isConfigured()) {
+    try { await TruckitCloud.pullKey(RATES_KEY); } catch (e) {}
+  }
+  try {
+    const a = document.querySelector('.home-link');
+    if (a && typeof truckitAppUrl === 'function') a.href = truckitAppUrl('index.html');
+  } catch (e) {}
+  renderList();
+  refreshMarket();
+})();
+</script>
+</body>
+</html>
